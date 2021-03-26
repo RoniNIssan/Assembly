@@ -1,5 +1,14 @@
 	IDEAL
 
+
+MACRO RND
+    mov ax, 40h
+    mov es, ax
+    mov ax, [es:6Ch]
+    and ax, 7
+ENDM
+
+
 MODEL small
 STACK 100h
 
@@ -17,6 +26,8 @@ STACK 100h
 	DISTANCE_FROM_BOUNDARY_X = 5; when moving on Y - distance between ghost and boundary	
 	DISTANCE_FROM_BOUNDARY_Y = 2; when moving on X - distance between ghost and boundary
 
+	FIRST_CURRENT_X = ? 
+	FIRST_CURRENT_Y = ?
 
 
 
@@ -31,14 +42,15 @@ DATASEG
 
 	currentX dw ? ;First value presents pacman startpoint
 	currentY dw ? ;First value presents pacman startpoint
-	currentPoint dw 320 * (curY - 1) + curX ;Represents the current pixel
+	currentPoint dw 320 * (FIRST_CURRENT_Y - 1) + FIRST_CURRENT_X ;Represents the current pixel
+	;**current point needed to be updated repeatedly
 	;currentPoint = boudariesOffset + 320 * (curY - 1) + curX 
 
     ;Array (presented as enum) will represent the optional directopn
 	direction db 1 dup ('N', 'S', 'W', 'E')
 	currentDirection dw ? 
 
-    availbleDir db 4 dup (0)
+	availbleDir db 4 dup (0)
 
 	;Random varibles
 	RndCurrentPos dw 0
