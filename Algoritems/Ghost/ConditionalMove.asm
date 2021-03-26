@@ -54,12 +54,18 @@ EXIT:
   
 END start
 
-
-;====================================
-;Proc
+;=======================================================
+;Proc setPacmanDirection
 ;Input: 
-;		boundariesPos_Matrix offset
-;====================================
+;By stack:
+;- Array adress (specified to baundary pixels) 
+;
+;- currentX
+;- currentY
+;
+;Output
+;- proc will change object current values (X,Y,Direction)
+;========================================================
 
 curX equ [currentX]
 curY equ [currentY]
@@ -75,7 +81,8 @@ proc setPacmanDirection
 
 	 ;push ax
 
-	 mov currentPoint, boudariesOffset + 320 * (curY - 1) + curX 
+	 ;mov currentPoint, boudariesOffset + 320 * (curY - 1) + curX 
+	 mov currentPoint, 320 * (curY - 1) + curX 
 	 cmp [currentDirection], 'N'
 	 jne Elseif
 

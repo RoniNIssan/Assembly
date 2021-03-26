@@ -31,13 +31,17 @@ DATASEG
 
 	currentX dw ? ;First value presents pacman startpoint
 	currentY dw ? ;First value presents pacman startpoint
+	currentPoint dw 320 * (curY - 1) + curX ;Represents the current pixel
+	;currentPoint = boudariesOffset + 320 * (curY - 1) + curX 
 
     ;Array (presented as enum) will represent the optional directopn
 	direction db 1 dup ('N', 'S', 'W', 'E')
-
 	currentDirection dw ? 
 
     availbleDir db 4 dup (0)
+
+	;Random varibles
+	RndCurrentPos dw 0
 
 CODESEG
     ORG 100h
@@ -60,27 +64,31 @@ EXIT:
 END start
 
 
-;====================================
-;Proc
+;=========================================================================
+;Proc countAvailableDirections
 ;Input: 
-;		boundariesPos_Matrix offset
-;====================================
+;---------------------------------------------
+; By stack:
+;- Array adress (boundary dots array) 
+;- currentPoint (by pixels)
+;- currentX 
+;- currentY
+;---------------------------------------------
+;Output
+; proc will change obj current dirction, X value and Y value
+;============================================================================
 
-curX equ [currentX]
-curY equ [currentY]
+ curX equ [bp + 10]
+ curY equ [bp + 8]
 boudariesOffset equ [bp + 4]
-currentPoint equ [bp - 2]
+ currentPoint equ [bp + 6]
 
 proc setPacmanDirection
 
 	 push bp
 	 mov bp, sp
 
-	 sub sp, 2
-
 	 ;push ax
-
-	 mov currentPoint, boudariesOffset + 320 * (curY - 1) + curX 
 	 cmp [currentDirection], 'N'
 	 jne Elseif
 
@@ -246,10 +254,8 @@ East:
 
 Continue:
 	 
-	 add sp, 2
-	 ;pop ax 
 	 pop bp 
-	 ret 2
+	 ret 8
 
 endp setPacmanDirection
 
@@ -466,9 +472,26 @@ proc is_turnFront
 
 endp is_turnFront
 
- currentDirection equ [bp + 6]
- boudariesOffset equ [bp + 4]
- currentPoint equ [bp - 2]
+   
+
+;=========================================================================
+;Proc countAvailableDirections
+;Input: 
+;---------------------------------------------
+; By stack:
+;- Array adress (available direction array) 
+;- currentPoint (by pixels)
+;- currentX 
+;- currentY
+;---------------------------------------------
+;Output
+;- static variable count:  proc will return the number of availble direction
+;- static array availbleDir:  proc will return the availble direction
+;============================================================================
+ curX equ [bp + 10]
+ curY equ [bp + 8]
+ availbleDirAdress equ [bp + 4]
+ currentPoint equ [bp + 6]
    
 proc countAvailableDirections
     ;Even if currentDirection is not on (boundary pixel) random check needed to be executed
@@ -476,15 +499,14 @@ proc countAvailableDirections
 	 push bp
 	 mov bp, sp
 
-	 sub sp, 2
-
      mov [count], 0
 
      mov bx, offset availbleDir
      mov cx, 4
 
-ZeroDirections: 
+
      ;loop on availbleDir array - contains all the available directions of turn
+ZeroDirections: 
      
      mov [bx], 0
 
@@ -492,10 +514,8 @@ ZeroDirections:
       
      loop ZeroDirections
 
-
-
-
-	 mov currentPoint, boudariesOffset + 320 * (curY - 1) + curX 
+	 ;mov currentPoint, boudariesOffset + 320 * (curY - 1) + curX 
+	 mov currentPoint, 320 * (curY - 1) + curX 
      
      mov bx, offset availbleDir
 
@@ -504,8 +524,10 @@ ZeroDirections:
      call is_turnLeft 
 
      cmp [Boolean], 1
-     ;jne TurnNorth
+     jne TurnEast
+
      mov [bx], 'W'
+	 inc bx
      inc [count]
 
     @@TurnEast:
@@ -513,8 +535,10 @@ ZeroDirections:
 	 call is_turnRight
 
      cmp [Boolean], 1
-     ;jne TurnNorth
+     jne TurnSouth
+
      mov [bx], 'E'
+	 inc bx
      inc [count]
 
 	 @@TurnSouth:
@@ -522,18 +546,75 @@ ZeroDirections:
 	 call is_turnBack
 
      cmp [Boolean], 1
-     ;jne TurnNorth
+     jne TurnNorth
      mov [bx], 'S'
+	 inc bx
      inc [count]
 
-    @@TurnWest:
+    @@TurnNorth:
      push currentPoint
      call is_turnFront 
 
      cmp [Boolean], 1
-     ;jne TurnNorth
+	 jne ExitProc
+
      mov [bx], 'N'
+	 inc bx
      inc [count]
+
+@@ExitProc:
+	 
+	 pop bp
+	 ret 8
+     
+endp countAvailableDirections
+
+;=========================================================================
+;Proc RandomNewDirection
+;Input: 
+;---------------------------------------------
+; By stack:
+;- Array adress (available direction array) 
+;---------------------------------------------
+;Output
+; new direcction in stack
+;============================================================================
+ 
+ availbleDirAdress equ [bp + 4]
+ randomDirection equ [bp - 2]
+
+proc RandomNewDirection
+
+	 push bp
+	 mov bp, sp
+	 
+	 sub sp, 2
+
+	 push ax
+	 push bx
+
+	 mov bl, 0
+	 mov bh, [count]
+	 dec bh
+	 
+	 call RandomByCs
+	 
+	 xor ah, ah
+
+	 mov bx, availbleDirAdress
+	 add bx, ax ;reaching the random cell in array
+
+	 randomDirection = [bx]
+
+	 add sp, 2
+
+	 pop bx
+	 pop ax
+	 pop bp
+
+	 ret 2
+
+endp RandomNewDirection
 
      
 ;Random ghost new movement direction
@@ -594,3 +675,8 @@ RandLoop: ;  generate random number
 	pop es
 	ret
 endp RandomByCs
+
+
+EndOfCsLbl:
+
+End start
