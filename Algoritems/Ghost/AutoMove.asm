@@ -80,7 +80,7 @@ END start
 
  curX equ [bp + 10]
  curY equ [bp + 8]
-boudariesOffset equ [bp + 4]
+ boudariesOffset equ [bp + 4]
  currentPoint equ [bp + 6]
 
 proc setPacmanDirection
@@ -472,7 +472,7 @@ proc is_turnFront
 
 endp is_turnFront
 
-   
+
 
 ;=========================================================================
 ;Proc countAvailableDirections
@@ -494,7 +494,7 @@ endp is_turnFront
  currentPoint equ [bp + 6]
    
 proc countAvailableDirections
-    ;Even if currentDirection is not on (boundary pixel) random check needed to be executed
+;Even if currentDirection is not on (boundary pixel) random check needed to be executed
 
 	 push bp
 	 mov bp, sp
@@ -505,7 +505,7 @@ proc countAvailableDirections
      mov cx, 4
 
 
-     ;loop on availbleDir array - contains all the available directions of turn
+;loop on availbleDir array - contains all the available directions of turn
 ZeroDirections: 
      
      mov [bx], 0
@@ -516,7 +516,7 @@ ZeroDirections:
 
 	 ;mov currentPoint, boudariesOffset + 320 * (curY - 1) + curX 
 	 mov currentPoint, 320 * (curY - 1) + curX 
-     
+
      mov bx, offset availbleDir
 
     @@TurnWest:
@@ -566,7 +566,7 @@ ZeroDirections:
 	 
 	 pop bp
 	 ret 8
-     
+
 endp countAvailableDirections
 
 ;=========================================================================
