@@ -45,8 +45,7 @@ start:
 	 ;start graphic mode
 	 mov ax, 13h
 	 int 10h
-
-	 
+ 
 	
 EXIT:
     
