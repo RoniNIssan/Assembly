@@ -41,7 +41,7 @@ DATASEG
 	currentX dw ? ;First value presents pacman startpoint
 	currentY dw ? ;First value presents pacman startpoint
 	currentPoint dw 320 * (curY - 1) + curX ;Represents the current pixel
-	;currentPoint = boudariesOffset + 320 * (curY - 1) + curX 
+	;currentPoint = boundariesAdress + 320 * (curY - 1) + curX 
 
     ;Array (presented as enum) will represent the optional directopn
 	direction db 1 dup ('N', 'S', 'W', 'E')
@@ -74,7 +74,7 @@ END start
 
 
 ;=========================================================================
-;Proc countAvailableDirections
+;Proc setObjNextPosValues
 ;Input: 
 ;---------------------------------------------
 ; By stack:
@@ -89,56 +89,64 @@ END start
 
  curX equ [bp + 10]
  curY equ [bp + 8]
- boudariesOffset equ [bp + 4]
  currentPoint equ [bp + 6]
+ boundariesAdress equ [bp + 4]
+ newDirection equ [bp - 4]
 
-proc setPacmanDirection
+proc setObjNextPosValues
 
 	 push bp
 	 mov bp, sp
 
-	 ;push ax
+	 push bx
+	 mov bx, boundariesAdress
+
+	 sub sp, 2
+
 	 cmp [currentDirection], 'N'
 	 jne Elseif
 
 North:
 	
-	 cmp (currentPoint - NEXT_POS_ADDED_PIXELS_Y * 320), 1
-	 jne continue
+	 cmp [bx + currentPoint - NEXT_POS_ADDED_PIXELS_Y * 320] , 1
+	 jne ExitProc
+	 
+	 ;call countAvailableDirections (North direction is checked. expected not to be included in availbleDir array)
+	 
+	 push currentX
+	 push currentY
+	 push currentPoint
+	 push offset availbleDir
+	 call countAndSetAvailableDirections
+	 pop newDirection
+	 
+	 cmp newDirection, 'W'
+	 je TurnWest
+	 cmp newDirection, 'E'
+	 je TurnEast
+	 jne TurnSouth
+
 
 	@@TurnWest:
- 	 push currentPoint
-	 call is_turnLeft 
-
-	 cmp [Boolean], 1
-	 jne TurnEast
 
 	 push (-NEXT_POS_ADDED_PIXELS_X) 
 	 call setCurrentX
 	 
-	 jmp Continue
+	 jmp ChangeDirection
 
 	@@TurnEast:
-
-	 push currentPoint
-	 call is_turnRight
-
-	 cmp [Boolean], 1
-
-	 jne TurnSouth
 
 	 push NEXT_POS_ADDED_PIXELS_X
 	 call setCurrentX
 
-	 jmp Continue
+	 jmp ChangeDirection
 
 	@@TurnSouth:
 
 	 push (-NEXT_POS_ADDED_PIXELS_Y)
 	 call setCurrentY
-	
-	 jmp Continue
 
+	 jmp ChangeDirection
 
 @@Elseif:
 	
@@ -146,41 +154,45 @@ North:
 	jne Elseif
 
 South:
+  
+ 	 cmp [bx + currentPoint + NEXT_POS_ADDED_PIXELS_Y * 320] , 1
+	 jne ExitProc
 
- 	 cmp (currentPoint + NEXT_POS_ADDED_PIXELS_Y * 320), 1
-	 jne continue
+	 ;call countAvailableDirections (North direction is checked. expected not to be included in availbleDir array)
+	 
+	 push currentX
+	 push currentY
+	 push currentPoint
+	 push offset availbleDir
+	 call countAndSetAvailableDirections
+	 pop newDirection
+	 
+	 cmp newDirection, 'W'
+	 je TurnWest
+	 cmp newDirection, 'E'
+	 je TurnEast
+	 jne TurnNorth
 
 	@@TurnWest:
- 	 push currentPoint
-	 call is_turnLeft 
-
-	 cmp [Boolean], 1
-	 jne TurnEast
 
 	 push (-NEXT_POS_ADDED_PIXELS_X) 
 	 call setCurrentX
-
-	 jmp Continue
+	 
+	 jmp ChangeDirection
 
 	@@TurnEast:
 
-	 push currentPoint
-	 call is_turnRight
-
-	 cmp [Boolean], 1
-	 jne TurnNorth
-
 	 push NEXT_POS_ADDED_PIXELS_X
 	 call setCurrentX
-	 
-	 jmp Continue
 
-	@@TurnNorth:
+	 jmp ChangeDirection
+
+	@@TurnSouth:
 
 	 push NEXT_POS_ADDED_PIXELS_Y
-	 call setCurrentY	 
+	 call setCurrentY
 
-	 jmp Continue
+	 jmp ChangeDirection
 
 @@Elseif:
 
@@ -189,89 +201,93 @@ South:
 
 West:
 
-	 cmp (currentPoint - NEXT_POS_ADDED_PIXELS_X), 1
-	 jne continue
+	 cmp [bx + currentPoint - NEXT_POS_ADDED_PIXELS_X], 1
+	 jne ExitProc
+
+	 push currentX
+	 push currentY
+	 push currentPoint
+	 push offset availbleDir
+	 call countAndSetAvailableDirections
+	 pop newDirection
+	 
+	 cmp newDirection, 'E'
+	 je TurnEast
+	 cmp newDirection, 'S'
+	 je TurnSouth
+	 jne TurnNorth
 
 	@@TurnEast:
 
-	 push currentPoint
-	 call is_turnRight
-
-	 cmp [Boolean], 1
-	 jne TurnNorth
-	 
 	 push NEXT_POS_ADDED_PIXELS_X
 	 call setCurrentX
 
-	 jmp Continue
+	 jmp ChangeDirection
 
-	 @@TurnSouth:
+	@@TurnSouth:
 
-	 push currentPoint
-	 call is_turnBack
+	 push NEXT_POS_ADDED_PIXELS_Y
+	 call setCurrentY
 
-	 cmp [Boolean], 1
-	 jne TurnNorth
+	 jmp ChangeDirection
 	 
-	 push (-NEXT_POS_ADDED_PIXELS_Y)
-	 call setCurrentY
-
-	 jmp Continue
-
-	 @@TurnNorth:
+	@@TurnNorth:
 
 	 push (-NEXT_POS_ADDED_PIXELS_Y)
 	 call setCurrentY
 
-	 jmp Continue
+	 jmp ChangeDirection
 
 East:
 
-	 cmp (currentPoint + NEXT_POS_ADDED_PIXELS_X), 1
-	 jne Continue
+	 cmp [bx + currentPoint + NEXT_POS_ADDED_PIXELS_X], 1
+	 jne ExitProc
+
+	 push currentX
+	 push currentY
+	 push currentPoint
+	 push offset availbleDir
+	 call countAndSetAvailableDirections
+	 pop newDirection
+	 
+	 cmp newDirection, 'W'
+	 je TurnEast
+	 cmp newDirection, 'S'
+	 je TurnSouth
+	 jne TurnNorth
 
 	@@TurnWest:
- 	 push currentPoint
-	 call is_turnLeft 
 
-	 cmp [Boolean], 1
-	 jne TurnSouth
-
-	 push (-NEXT_POS_ADDED_PIXELS_X) 
+	 push (-NEXT_POS_ADDED_PIXELS_X)
 	 call setCurrentX
 
-	 jmp Continue
+	 jmp ChangeDirection
 
-	 @@TurnSouth:
+	@@TurnSouth:
 
-	 push currentPoint
-	 call is_turnBack
-
-	 cmp [Boolean], 1
-	 jne TurnNorth
-	 
-	 push (-NEXT_POS_ADDED_PIXELS_Y)
+	 push NEXT_POS_ADDED_PIXELS_Y
 	 call setCurrentY
 
-	 jmp Continue
-
-	 @@TurnNorth:
+	 jmp ChangeDirection
+	 
+	@@TurnNorth:
 
 	 push (-NEXT_POS_ADDED_PIXELS_Y)
 	 call setCurrentY
 
+ChangeDirection:
 
-Continue:
+	 push newDirection
+	 call setCurrentDirection
+
+@@ExitProc:
 	 
+	 add sp, 2
+	 pop bx
 	 pop bp 
 	 ret 8
 
-endp setPacmanDirection
-
-
-
-
-
+endp setObjNextPosValues
 
 ;====================================
 ;Proc setCurrentX
@@ -336,7 +352,23 @@ proc setCurrentY
 	ret
 
 endp setCurrentY
-	
+
+;===================================================
+;Proc setCurrentDirection
+;Input: 
+;- next Direction
+;Output
+;- new direction in static varible currentDirection
+;===================================================
+proc setCurrentDirection
+
+	 pop [currentDirection]
+	 
+	ret
+
+endp setCurrentDirection	
+
+
 ;====================================
 ;Proc is_turnRight
 ;Input: 
@@ -484,29 +516,36 @@ endp is_turnFront
 
 
 ;=========================================================================
-;Proc countAvailableDirections
+;Proc countAndSetAvailableDirections
 ;Input: 
 ;---------------------------------------------
 ; By stack:
-;- Array adress (available direction array) 
-;- currentPoint (by pixels)
 ;- currentX 
 ;- currentY
+;- currentPoint (by pixels)
+;- Array adress (available direction array) 
 ;---------------------------------------------
 ;Output
 ;- static variable count:  proc will return the number of availble direction
 ;- static array availbleDir:  proc will return the availble direction
+;- stack varible: contains the random direction [doesn't set as the new direction]
 ;============================================================================
  curX equ [bp + 10]
  curY equ [bp + 8]
- availbleDirAdress equ [bp + 4]
  currentPoint equ [bp + 6]
+ availbleDirAdress equ [bp + 4]
    
-proc countAvailableDirections
+proc countAndSetAvailableDirections
+
+;===============
+;Count available Directions
 ;Even if currentDirection is not on (boundary pixel) random check needed to be executed
 
 	 push bp
 	 mov bp, sp
+
+	 push bx
+	 push cx
 
      mov [count], 0
 
@@ -523,7 +562,7 @@ ZeroDirections:
       
      loop ZeroDirections
 
-	 ;mov currentPoint, boudariesOffset + 320 * (curY - 1) + curX 
+	 ;mov currentPoint, boundariesAdress + 320 * (curY - 1) + curX 
 	 mov currentPoint, 320 * (curY - 1) + curX 
 
      mov bx, offset availbleDir
@@ -571,12 +610,20 @@ ZeroDirections:
 	 inc bx
      inc [count]
 
+;=========================
+;Random and set new direction
+
+	 push availbleDirAdress
+	 call RandomNewDirection
+
 @@ExitProc:
 	 
+	 pop cx
+	 pop bx
 	 pop bp
 	 ret 8
 
-endp countAvailableDirections
+endp countAndSetAvailableDirections
 
 ;=========================================================================
 ;Proc RandomNewDirection
@@ -590,17 +637,17 @@ endp countAvailableDirections
 ;============================================================================
  
  availbleDirAdress equ [bp + 4]
- randomDirection equ [bp - 2]
+ randomDirection equ [bp - 6]
 
 proc RandomNewDirection
 
 	 push bp
 	 mov bp, sp
-	 
-	 sub sp, 2
 
 	 push ax
 	 push bx
+
+	 sub sp, 2
 
 	 mov bl, 0
 	 mov bh, [count]
