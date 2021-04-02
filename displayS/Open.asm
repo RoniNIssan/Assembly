@@ -1,26 +1,36 @@
 	IDEAL
-
-MODEL small
+MODEL small 
 STACK 100h	
 
 
 
 FILENAME_SCREEN equ 'Screen.bmp'
 FILENAME_PLAY equ 'Play.bmp'
+FILENAME_LB equ 'lb.bmp'
+FILENAME_Inst equ 'Inst.bmp'
 
 
 FILE_ROWS = 200
 FILE_COLS = 320 
 
-
+;Play Banner values
 PLAY_RIGHT_COL = 187
 PLAY_LEFT_COL = 137
-PLAY_COL_RANGE = PLAY_RIGHT_COL - PLAY_LEFT_COL
 PLAY_TOP_ROW = 50
 PLAY_BOTTOM_ROW = 71
-PLAY_ROW_RANGE = PLAY_BOTTOM_ROW - PLAY_TOP_ROW
+
+;Leaderboard Banner values
+LB_RIGHT_COL = 239
+LB_LEFT_COL = 92
+LB_TOP_ROW = 78
+LB_BOTTOM_ROW = 89
 
 
+;Game instructions Banner values
+INST_RIGHT_COL = 270
+INST_LEFT_COL = 51
+INST_TOP_ROW = 96
+INST_BOTTOM_ROW = 107
 
 DATASEG
 	 
@@ -29,6 +39,8 @@ DATASEG
 	
 		Filename_StartScreen db FILENAME_SCREEN, 0
 		Filename_PlayButton db FILENAME_PLAY, 0
+		Filename_LbButton db FILENAME_LB, 0
+		Filename_InstButton db FILENAME_Inst, 0
 		ScrLine 	db FILE_COLS dup (0)  ; One Color line read buffer
 
 		FileHandle	dw ?
@@ -78,58 +90,33 @@ start:
 
 CheckStatus:
 
-	 ;call key
-	 ;jz EXIT
 
      mov ax, 3h
 	 int 33h	
-
-	 cmp bx, 1
-	 jne CheckStatus
 
 	 shr cx, 1
 	 mov [MouseX], cx
 	 mov [MouseY], dx
 
-	 mov ah, 1
-	 int 16h
-	 
-	 jnz COPMARE
-	 jz Rows_Check
-COPMARE:
+	 call isQuitPressed
 
-	 cmp al, 'q'
-	 je EXIT 
+	 cmp [Bool], 1
+	 je ShrotcutExit
 
+PlayBanner:
 
-	 ;call isInRange
-	 
-	 Rows_Check:
+	 push PLAY_LEFT_COL
+	 push PLAY_RIGHT_COL
+	 push PLAY_TOP_ROW
+	 push PLAY_BOTTOM_ROW
+	 call isInRange
 
-	 mov ax, [MouseX]
-	 
-	; mov ax, 08Ch
+	 cmp [Bool], 1
+	 jne LeaderBoardBanner
 
-     cmp ax, PLAY_RIGHT_COL
-	 ja CheckStatus
+	 mov ax, 2
+	 int 33h
 
-     cmp ax, PLAY_LEFT_COL
-	 jb CheckStatus
-
-	 Col_Check:
-
-	 mov ax, [MouseY]
-
-	 mov ax, 60
-
-     cmp ax, PLAY_TOP_ROW
-	 jb CheckStatus
-
-	 cmp ax, PLAY_BOTTOM_ROW
-	 ja CheckStatus
-
-
-     ;call playbanner
 	 mov [MouseY], dx
      mov dx, offset Filename_PlayButton
      mov [BmpLeft],0 ;start point
@@ -138,16 +125,69 @@ COPMARE:
      mov [BmpRowSize] ,FILE_ROWS
      call OpenShowBmp
 
-     call ToWait
+	 mov ax,1h
+	 int 33h
 
- 	; call ReadMouse	 
+	 jmp LeaderBoardBanner
 
+ShrotcutExit:
+	 jmp EXIT
+	 	 
+LeaderBoardBanner:
 
-;init mouse	
+	 push LB_LEFT_COL
+	 push LB_RIGHT_COL
+	 push LB_TOP_ROW
+	 push LB_BOTTOM_ROW
+	 call isInRange
 
+	 cmp [Bool], 1
+	 jne GameInstructionsBanner
 
-    
- 
+	 mov ax, 2
+	 int 33h
+
+	 mov [MouseY], dx
+     mov dx, offset Filename_LbButton
+     mov [BmpLeft],0 ;start point
+     mov [BmpTop],0
+     mov [BmpColSize], FILE_COLS
+     mov [BmpRowSize] ,FILE_ROWS
+     call OpenShowBmp
+
+	 mov ax,1h
+	 int 33h
+	 
+	 jmp GameInstructionsBanner
+
+ShrotcutStart:
+	 jmp CheckStatus
+
+GameInstructionsBanner:
+
+	 push INST_LEFT_COL
+	 push INST_RIGHT_COL
+	 push INST_TOP_ROW
+	 push INST_BOTTOM_ROW
+	 call isInRange
+
+	 cmp [Bool], 1
+	 jne ShrotcutStart
+
+	 mov ax, 2
+	 int 33h
+
+	 mov [MouseY], dx
+     mov dx, offset Filename_InstButton
+     mov [BmpLeft],0 ;start point
+     mov [BmpTop],0
+     mov [BmpColSize], FILE_COLS
+     mov [BmpRowSize] ,FILE_ROWS
+     call OpenShowBmp 
+
+	 mov ax,1h
+	 int 33h
+
 EXIT:
 
 	 ;call PlayBannerCheck
@@ -159,6 +199,25 @@ EXIT:
 	 mov ax, 4C00h ; returns control to dos
   	 int 21h
   
+
+
+proc isQuitPressed 
+
+	 mov [Bool], 0
+	 mov ah, 1
+	 int 16h
+	 jz ExitProc
+
+True:
+	 cmp al, 'q'
+	 jne ExitProc
+	 
+	 mov [Bool], 1
+
+@@ExitProc:
+	 ret
+
+endp isQuitPressed 
 
 ;=============================================
 ;Check mouse position on buttons
@@ -175,16 +234,19 @@ EXIT:
 ;=============================================
 
 ;Button values
-leftCol equ [bp + 8]
-rightCol equ [bp + 6]
-topRow equ [bp + 4]
-bottomRow equ [bp + 2]
+leftCol equ [bp + 10]
+rightCol equ [bp + 8]
+topRow equ [bp + 6]
+bottomRow equ [bp + 4]
 
 proc isInRange
-push bp
-mov bp, sp
 
-@@Rows_Check:
+	 push bp
+	 mov bp, sp
+
+ 	 push ax
+
+Rows_Check:
 
      ;mouse pos bigger than button edge
 	 mov ax, [MouseX]
@@ -195,7 +257,7 @@ mov bp, sp
      cmp ax, leftCol
 	 jb ExitProc
 
-@@Col_Check:
+Col_Check:
 
 	 mov ax, [MouseY]
 
@@ -209,31 +271,13 @@ mov bp, sp
 
 
 ExitProc:
+
+	 pop ax
      pop bp
 	 
-	 ret 
+	 ret 4
 
 endp isInRange
-
-;=================================
-;Input: MouseX and MouseY varibles
-;================================
-proc PlayBannerCheck
-     
-	 ;call ReadMouse
-     
-     push PLAY_LEFT_COL
-     push PLAY_RIGHT_COL
-     push PLAY_TOP_ROW
-     push PLAY_BOTTOM_ROW
-
-     call isInRange
-	 
-@@ExitProc:
-     ret
-
-endp PlayBannerCheck
-
 
 
 proc PlayBannerDis
