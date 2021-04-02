@@ -4,7 +4,9 @@ MODEL small
 STACK 100h	
 
 
-FILENAME_SCREEN equ 'Screen.bmp'
+
+;FILENAME_SCREEN equ 'Screen.bmp'
+FILENAME_SCREEN equ 'Game.bmp'
 FILENAME_PLAY equ 'Play.bmp'
 
 
@@ -73,7 +75,7 @@ start:
 	 mov ax,1h
 	 int 33h
 
-	 call ReadMouse	 
+	; call ReadMouse	 
      call StratScreen
 
 
@@ -81,8 +83,8 @@ start:
 
 
      call ToWait
-	 call PlayBannerCheck
-	 call PlayBannerDis
+	 ;call PlayBannerCheck
+	 ;call PlayBannerDis
 	 mov ah,00h
      int 16h
     
