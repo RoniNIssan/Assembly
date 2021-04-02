@@ -5,8 +5,7 @@ STACK 100h
 
 
 
-;FILENAME_SCREEN equ 'Screen.bmp'
-FILENAME_SCREEN equ 'Game.bmp'
+FILENAME_SCREEN equ 'Screen.bmp'
 FILENAME_PLAY equ 'Play.bmp'
 
 
@@ -16,8 +15,8 @@ FILE_COLS = 320
 
 PLAY_RIGHT_COL = 187
 PLAY_LEFT_COL = 137
-PLAY_COL_RANGE = 50
-PLAY_TOP_ROW = PLAY_RIGHT_COL - PLAY_LEFT_COL
+PLAY_COL_RANGE = PLAY_RIGHT_COL - PLAY_LEFT_COL
+PLAY_TOP_ROW = 50
 PLAY_BOTTOM_ROW = 71
 PLAY_ROW_RANGE = PLAY_BOTTOM_ROW - PLAY_TOP_ROW
 
@@ -69,27 +68,92 @@ start:
 ;		Openning Scrren
 
 	 call stratGraphicMode
+     call StratScreen
+
 	 mov ax,0h
 	 int 33h
 
 	 mov ax,1h
 	 int 33h
 
-	; call ReadMouse	 
-     call StratScreen
+CheckStatus:
+
+	 ;call key
+	 ;jz EXIT
+
+     mov ax, 3h
+	 int 33h	
+
+	 cmp bx, 1
+	 jne CheckStatus
+
+	 shr cx, 1
+	 mov [MouseX], cx
+	 mov [MouseY], dx
+
+	 mov ah, 1
+	 int 16h
+	 
+	 jnz COPMARE
+	 jz Rows_Check
+COPMARE:
+
+	 cmp al, 'q'
+	 je EXIT 
+
+
+	 ;call isInRange
+	 
+	 Rows_Check:
+
+	 mov ax, [MouseX]
+	 
+	; mov ax, 08Ch
+
+     cmp ax, PLAY_RIGHT_COL
+	 ja CheckStatus
+
+     cmp ax, PLAY_LEFT_COL
+	 jb CheckStatus
+
+	 Col_Check:
+
+	 mov ax, [MouseY]
+
+	 mov ax, 60
+
+     cmp ax, PLAY_TOP_ROW
+	 jb CheckStatus
+
+	 cmp ax, PLAY_BOTTOM_ROW
+	 ja CheckStatus
+
+
+     ;call playbanner
+	 mov [MouseY], dx
+     mov dx, offset Filename_PlayButton
+     mov [BmpLeft],0 ;start point
+     mov [BmpTop],0
+     mov [BmpColSize], FILE_COLS
+     mov [BmpRowSize] ,FILE_ROWS
+     call OpenShowBmp
+
+     call ToWait
+
+ 	; call ReadMouse	 
 
 
 ;init mouse	
 
 
-     call ToWait
+    
+ 
+EXIT:
+
 	 ;call PlayBannerCheck
 	 ;call PlayBannerDis
 	 mov ah,00h
      int 16h
-    
- 
-EXIT:
 
 	 call finishGraphicMode
 	 mov ax, 4C00h ; returns control to dos
@@ -120,7 +184,7 @@ proc isInRange
 push bp
 mov bp, sp
 
-Rows_Check:
+@@Rows_Check:
 
      ;mouse pos bigger than button edge
 	 mov ax, [MouseX]
@@ -131,7 +195,7 @@ Rows_Check:
      cmp ax, leftCol
 	 jb ExitProc
 
-Col_Check:
+@@Col_Check:
 
 	 mov ax, [MouseY]
 
