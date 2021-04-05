@@ -66,6 +66,7 @@ DATASEG
 
 		;Boolean
 		Bool db 0 ; false
+		isButtonOn db 0
 
 CODESEG
 
@@ -90,6 +91,7 @@ start:
 
 CheckStatus:
 
+
      mov ax, 3h
 	 int 33h	
 
@@ -110,25 +112,44 @@ PlayBanner:
 	 push PLAY_BOTTOM_ROW
 	 call isInRange
 
-
 	 cmp [Bool], 1	
+	 jne CleanScreen
+
+
+	 cmp [isButtonOn], 1
+	 je CheckStatus
+
+	 mov ax, 2
+	 int 33h
+
+	 mov [isButtonOn], 1
+	 call PlayButtonDisplay
+
+	 mov ax,1h
+	 int 33h
+
+	 jmp CheckStatus
+	  
+CleanScreen:
+
+	 cmp [isButtonOn], 1
 	 jne CheckStatus
 
 	 mov ax, 2
 	 int 33h
 
-	 mov [MouseY], dx
-     mov dx, offset Filename_PlayButton
-     mov [BmpLeft],0 ;start point
-     mov [BmpTop],0
-     mov [BmpColSize], FILE_COLS
-     mov [BmpRowSize] ,FILE_ROWS
-     call OpenShowBmp
+	 mov [isButtonOn], 0
+     call StratScreen
 
-	 ;jmp CheckStatus
-
-	 mov ax,1h
+ 	 mov ax,1h
 	 int 33h
+
+	 jmp CheckStatus
+
+
+	 	  
+
+
 
 EXIT:
 
@@ -141,7 +162,12 @@ EXIT:
   	 int 21h
   
 
-
+;=============================================
+;Check if 'q' button is pressed
+;--------------------------------------------
+;Output:
+;varible Bool 1 true/ 0 false
+;=============================================
 proc isQuitPressed 
 
 	 mov [Bool], 0 ;false
@@ -222,22 +248,6 @@ Col_Check:
 
 endp isInRange
 
-
-proc PlayBannerDis
-
-     cmp [Bool], 1
-     jne @@ExitProc
-
-     mov dx, offset Filename_PlayButton
-     mov [BmpLeft],0 ;start point
-     mov [BmpTop],0
-     mov [BmpColSize], FILE_COLS
-     mov [BmpRowSize] ,FILE_ROWS
-     call OpenShowBmp
-
-@@ExitProc:
-     ret
-endp PlayBannerDis
 ;========================
 ;Absorb mouse potsition
 ;========================
@@ -267,6 +277,23 @@ proc StratScreen
      ret
 
 endp StratScreen
+
+;==================================
+;play button colored screen dispaly
+;==================================
+proc PlayButtonDisplay
+
+ 	 mov [MouseY], dx
+     mov dx, offset Filename_PlayButton
+     mov [BmpLeft],0 ;start point
+     mov [BmpTop],0
+     mov [BmpColSize], FILE_COLS
+     mov [BmpRowSize] ,FILE_ROWS
+     call OpenShowBmp
+
+     ret
+
+endp PlayButtonDisplay
 
 
 
