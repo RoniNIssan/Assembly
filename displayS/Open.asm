@@ -102,7 +102,7 @@ CheckStatus:
 	 call isQuitPressed
 
 	 cmp [Bool], 1
-	 je EXIT
+	 je ExitShourtcut
 
 PlayBanner:
 
@@ -113,7 +113,7 @@ PlayBanner:
 	 call isInRange
 
 	 cmp [Bool], 1	
-	 jne CleanScreen
+	 jne LeaderBoardBanner
 
 
 	 cmp [isButtonOn], 1
@@ -129,11 +129,69 @@ PlayBanner:
 	 int 33h
 
 	 jmp CheckStatus
-	  
-CleanScreen:
+
+ExitShourtcut:
+	 jmp EXIT
+
+
+LeaderBoardBanner:
+
+	 push LB_LEFT_COL
+	 push LB_RIGHT_COL
+	 push LB_TOP_ROW
+	 push LB_BOTTOM_ROW
+	 call isInRange
+
+	 cmp [Bool], 1
+	 jne GameInstructionsBanner
 
 	 cmp [isButtonOn], 1
-	 jne CheckStatus
+	 je CheckStatusShourtcut
+
+	 mov ax, 2
+	 int 33h
+
+	 mov [isButtonOn], 1
+	 call LbButtonDisplay
+
+	 mov ax,1h
+	 int 33h
+
+	 jmp CheckStatus
+
+CheckStatusShourtcut:
+	 jmp CheckStatus
+
+GameInstructionsBanner:
+
+	 push INST_LEFT_COL
+	 push INST_RIGHT_COL
+	 push INST_TOP_ROW
+	 push INST_BOTTOM_ROW
+	 call isInRange
+
+
+	 cmp [Bool], 1
+	 jne @@CleanScreen
+
+	 cmp [isButtonOn], 1
+	 je CheckStatusShourtcut
+
+	 mov ax, 2
+	 int 33h
+
+	 mov [isButtonOn], 1
+	 call InstButtonDisplay
+
+	 mov ax,1h
+	 int 33h
+
+	 jmp CheckStatus
+
+@@CleanScreen:
+
+	 cmp [isButtonOn], 1
+	 jne CheckStatusShourtcut
 
 	 mov ax, 2
 	 int 33h
@@ -145,11 +203,6 @@ CleanScreen:
 	 int 33h
 
 	 jmp CheckStatus
-
-
-	 	  
-
-
 
 EXIT:
 
@@ -295,9 +348,39 @@ proc PlayButtonDisplay
 
 endp PlayButtonDisplay
 
+;==========================================
+;leaderboard button colored screen dispaly
+;=========================================
+proc LbButtonDisplay
 
+	 mov [MouseY], dx
+     mov dx, offset Filename_LbButton
+     mov [BmpLeft],0 ;start point
+     mov [BmpTop],0
+     mov [BmpColSize], FILE_COLS
+     mov [BmpRowSize] ,FILE_ROWS
+     call OpenShowBmp
 
+	 ret
 
+endp LbButtonDisplay
+
+;===============================================
+;Game instructions button colored screen dispaly
+;===============================================
+proc InstButtonDisplay
+
+	 mov [MouseY], dx
+     mov dx, offset Filename_InstButton
+     mov [BmpLeft],0 ;start point
+     mov [BmpTop],0
+     mov [BmpColSize], FILE_COLS
+     mov [BmpRowSize] ,FILE_ROWS
+     call OpenShowBmp 
+
+	 ret
+
+endp InstButtonDisplay
 ;============================================================================================
 ;=======================
 ;Put bmp file on screen
@@ -534,22 +617,6 @@ proc ToWait
 	 ret
 	
 endp ToWait	
-;================================================
-; Description: check if a key was pressed
-; INPUT: None
-; OUTPUT: Screen 
-; Register Usage: AX  
-;================================================
-	 
-proc Key
-
-	 mov ah, 1
-	 int 16h
-
-	 ret
-	
-endp Key	
-
 
 ;================================================
 ; Description: Draw a Horizontal line
