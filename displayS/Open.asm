@@ -32,6 +32,12 @@ INST_LEFT_COL = 51
 INST_TOP_ROW = 96
 INST_BOTTOM_ROW = 107
 
+;Quit Banner values
+QUIT_RIGHT_COL = 34
+QUIT_LEFT_COL = 10
+QUIT_TOP_ROW = 6
+QUIT_BOTTOM_ROW = 31
+
 DATASEG
 	 
 
@@ -99,10 +105,19 @@ CheckStatus:
 	 mov [MouseX], cx
 	 mov [MouseY], dx
 
-	 call isQuitPressed
 
+	 push QUIT_LEFT_COL
+	 push QUIT_RIGHT_COL
+	 push QUIT_TOP_ROW
+	 push QUIT_BOTTOM_ROW
+	 call isInRange
+ 
 	 cmp [Bool], 1
+	 jne PlayBanner
+	 
+	 cmp bx, 1
 	 je ExitShourtcut
+	 
 
 PlayBanner:
 
@@ -129,6 +144,7 @@ PlayBanner:
 	 int 33h
 
 	 jmp CheckStatus
+
 
 ExitShourtcut:
 	 jmp EXIT
@@ -206,35 +222,25 @@ GameInstructionsBanner:
 
 EXIT:
 
-
-	 mov ah,00h
-     int 16h
-
 	 call finishGraphicMode
 	 mov ax, 4C00h ; returns control to dos
   	 int 21h
   
 
 ;=============================================
-;Check if 'q' button is pressed
+;Check if quit button is pressed
 ;--------------------------------------------
 ;Output:
 ;varible Bool 1 true/ 0 false
 ;=============================================
 proc isQuitPressed 
 
-	 mov [Bool], 0 ;false
-	 mov ah, 1
-	 int 16h
-	 jz @@ExitProc ;keep false - no keys have been pressed
-
-True:
-	 cmp al, 'q'
-	 jne @@ExitProc
-	 
-	 mov [Bool], 1
-
-@@ExitProc:
+	 push QUIT_LEFT_COL
+	 push QUIT_RIGHT_COL
+	 push QUIT_TOP_ROW
+	 push QUIT_BOTTOM_ROW
+	 call isInRange
+ 
 	 ret
 
 endp isQuitPressed 
