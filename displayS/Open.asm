@@ -90,7 +90,6 @@ start:
 
 CheckStatus:
 
-
      mov ax, 3h
 	 int 33h	
 
@@ -101,7 +100,7 @@ CheckStatus:
 	 call isQuitPressed
 
 	 cmp [Bool], 1
-	 je ShrotcutExit
+	 je EXIT
 
 PlayBanner:
 
@@ -111,8 +110,9 @@ PlayBanner:
 	 push PLAY_BOTTOM_ROW
 	 call isInRange
 
-	 cmp [Bool], 1
-	 jne LeaderBoardBanner
+
+	 cmp [Bool], 1	
+	 jne CheckStatus
 
 	 mov ax, 2
 	 int 33h
@@ -125,73 +125,14 @@ PlayBanner:
      mov [BmpRowSize] ,FILE_ROWS
      call OpenShowBmp
 
-	 mov ax,1h
-	 int 33h
-
-	 jmp LeaderBoardBanner
-
-ShrotcutExit:
-	 jmp EXIT
-	 	 
-LeaderBoardBanner:
-
-	 push LB_LEFT_COL
-	 push LB_RIGHT_COL
-	 push LB_TOP_ROW
-	 push LB_BOTTOM_ROW
-	 call isInRange
-
-	 cmp [Bool], 1
-	 jne GameInstructionsBanner
-
-	 mov ax, 2
-	 int 33h
-
-	 mov [MouseY], dx
-     mov dx, offset Filename_LbButton
-     mov [BmpLeft],0 ;start point
-     mov [BmpTop],0
-     mov [BmpColSize], FILE_COLS
-     mov [BmpRowSize] ,FILE_ROWS
-     call OpenShowBmp
-
-	 mov ax,1h
-	 int 33h
-	 
-	 jmp GameInstructionsBanner
-
-ShrotcutStart:
-	 jmp CheckStatus
-
-GameInstructionsBanner:
-
-	 push INST_LEFT_COL
-	 push INST_RIGHT_COL
-	 push INST_TOP_ROW
-	 push INST_BOTTOM_ROW
-	 call isInRange
-
-	 cmp [Bool], 1
-	 jne ShrotcutStart
-
-	 mov ax, 2
-	 int 33h
-
-	 mov [MouseY], dx
-     mov dx, offset Filename_InstButton
-     mov [BmpLeft],0 ;start point
-     mov [BmpTop],0
-     mov [BmpColSize], FILE_COLS
-     mov [BmpRowSize] ,FILE_ROWS
-     call OpenShowBmp 
+	 ;jmp CheckStatus
 
 	 mov ax,1h
 	 int 33h
 
 EXIT:
 
-	 ;call PlayBannerCheck
-	 ;call PlayBannerDis
+
 	 mov ah,00h
      int 16h
 
@@ -203,14 +144,14 @@ EXIT:
 
 proc isQuitPressed 
 
-	 mov [Bool], 0
+	 mov [Bool], 0 ;false
 	 mov ah, 1
 	 int 16h
-	 jz ExitProc
+	 jz @@ExitProc ;keep false - no keys have been pressed
 
 True:
 	 cmp al, 'q'
-	 jne ExitProc
+	 jne @@ExitProc
 	 
 	 mov [Bool], 1
 
@@ -245,6 +186,8 @@ proc isInRange
 	 mov bp, sp
 
  	 push ax
+	 
+	 mov [Bool], 0
 
 Rows_Check:
 
@@ -252,25 +195,25 @@ Rows_Check:
 	 mov ax, [MouseX]
 
      cmp ax, rightCol
-	 ja ExitProc
+	 ja @@ExitProc
 
      cmp ax, leftCol
-	 jb ExitProc
+	 jb @@ExitProc
 
 Col_Check:
 
 	 mov ax, [MouseY]
 
      cmp ax, topRow
-	 jb ExitProc
+	 jb @@ExitProc
 
 	 cmp ax, bottomRow
-	 ja ExitProc
+	 ja @@ExitProc
 
 	 mov [Bool], 1
 
 
-ExitProc:
+@@ExitProc:
 
 	 pop ax
      pop bp
@@ -283,7 +226,7 @@ endp isInRange
 proc PlayBannerDis
 
      cmp [Bool], 1
-     jne ExitProc
+     jne @@ExitProc
 
      mov dx, offset Filename_PlayButton
      mov [BmpLeft],0 ;start point
