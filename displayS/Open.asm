@@ -71,8 +71,14 @@ DATASEG
         MouseY dw ?
 
 		;Boolean
-		Bool db 0 ; false
+		Bool db 0 
 		isButtonOn db 0
+
+		;Buttons on
+		play db 0
+		Lb db 0
+		inst db 0
+
 
 CODESEG
 
@@ -130,9 +136,11 @@ PlayBanner:
 	 cmp [Bool], 1	
 	 jne LeaderBoardBanner
 
+	 cmp bx, 1
+	 je PlayClick
 
 	 cmp [isButtonOn], 1
-	 je CheckStatus
+	 je CheckStatusShourtcut
 
 	 mov ax, 2
 	 int 33h
@@ -145,11 +153,13 @@ PlayBanner:
 
 	 jmp CheckStatus
 
+PlayClick:
+	 mov [play], 1
 
 ExitShourtcut:
 	 jmp EXIT
 
-
+	
 LeaderBoardBanner:
 
 	 push LB_LEFT_COL
@@ -160,6 +170,9 @@ LeaderBoardBanner:
 
 	 cmp [Bool], 1
 	 jne GameInstructionsBanner
+
+	 cmp bx, 1
+	 je LbClick
 
 	 cmp [isButtonOn], 1
 	 je CheckStatusShourtcut
@@ -178,6 +191,10 @@ LeaderBoardBanner:
 CheckStatusShourtcut:
 	 jmp CheckStatus
 
+LbClick:
+	 mov [lb], 1
+	 jmp EXIT
+
 GameInstructionsBanner:
 
 	 push INST_LEFT_COL
@@ -189,6 +206,9 @@ GameInstructionsBanner:
 
 	 cmp [Bool], 1
 	 jne @@CleanScreen
+
+	 cmp bx, 1
+	 je InstClick
 
 	 cmp [isButtonOn], 1
 	 je CheckStatusShourtcut
@@ -214,11 +234,14 @@ GameInstructionsBanner:
 
 	 mov [isButtonOn], 0
      call StratScreen
-
+    
  	 mov ax,1h
 	 int 33h
 
 	 jmp CheckStatus
+
+InstClick:
+	 mov [inst], 1
 
 EXIT:
 
@@ -254,6 +277,9 @@ endp isQuitPressed
 ;Stack inputs:
 ;left column, right column
 ;top row, bottom row
+;--------------------------------------------
+;Registers:
+; ax, bp
 ;--------------------------------------------
 ;Output:
 ;varible Bool 1 true/ 0 false
@@ -307,19 +333,6 @@ Col_Check:
 
 endp isInRange
 
-;========================
-;Absorb mouse potsition
-;========================
- proc ReadMouse
-
- 	 mov ax,3h
-	 int 33h
-     shr cx, 1
-     mov [MouseX], cx 
-     mov [MouseY], dx
-     
-	 ret
- endp ReadMouse
 
 ;======================
 ;start screen dispaly
