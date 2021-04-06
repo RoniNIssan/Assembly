@@ -4,33 +4,19 @@ STACK 100h
 
 
 
-FILENAME_SCREEN equ 'Screen.bmp'
-FILENAME_PLAY equ 'Play.bmp'
-FILENAME_LB equ 'lb.bmp'
-FILENAME_Inst equ 'Inst.bmp'
+FILENAME_MAZE equ 'Maze.bmp'
+FILENAME_PACMAN_NORTH equ 'PN.bmp'
+FILENAME_PACMAN_SOUTH equ 'PS.bmp'
+FILENAME_PACMAN_EAST equ 'PE.bmp'
+FILENAME_PACMAN_WEST equ 'PW.bmp'
 
+;Maze - background
+FILE_ROWS_SCREEN = 200
+FILE_COLS_SCREEN = 320 
 
-FILE_ROWS = 200
-FILE_COLS = 320 
-
-;Play Banner values
-PLAY_RIGHT_COL = 187
-PLAY_LEFT_COL = 137
-PLAY_TOP_ROW = 50
-PLAY_BOTTOM_ROW = 71
-
-;Leaderboard Banner values
-LB_RIGHT_COL = 239
-LB_LEFT_COL = 92
-LB_TOP_ROW = 78
-LB_BOTTOM_ROW = 89
-
-
-;Game instructions Banner values
-INST_RIGHT_COL = 270
-INST_LEFT_COL = 51
-INST_TOP_ROW = 96
-INST_BOTTOM_ROW = 107
+;Pacman figure 
+FILE_ROWS_PACMAN = 9
+FILE_COLS_PACMAN = 9 
 
 ;Quit Banner values
 QUIT_RIGHT_COL = 34
@@ -43,41 +29,35 @@ DATASEG
 
 
 	
-		Filename_StartScreen db FILENAME_SCREEN, 0
-		Filename_PlayButton db FILENAME_PLAY, 0
-		Filename_LbButton db FILENAME_LB, 0
-		Filename_InstButton db FILENAME_Inst, 0
-		ScrLine 	db FILE_COLS dup (0)  ; One Color line read buffer
+		Filename_Maze db FILENAME_MAZE, 0
+		Filename_PacmanNorth db FILENAME_PACMAN_NORTH, 0
+		Filename_PacmanSouth db FILENAME_PACMAN_SOUTH, 0
+		Filename_PacmanEast db FILENAME_PACMAN_EAST, 0
+		Filename_PacmanWest db FILENAME_PACMAN_WEST, 0
+		ScrLine 	db FILE_COLS_SCREEN dup (0)  ; One Color line read buffer
 
 		FileHandle	dw ?
 		Header 	    db 54 dup(0)
 		Palette 	db 400h dup (0)	
 		
-		BmpFileErrorMsg    	db 'Error At Opening Bmp File ',FILENAME_SCREEN, 0dh, 0ah,'$'
+		BmpFileErrorMsg    	db 'Error At Opening Bmp File ',FILENAME_MAZE, 0dh, 0ah,'$'
 		ErrorFile           db 0
 	
 		BmpLeft dw ?
 		BmpTop dw ?
 		BmpColSize dw ?
 		BmpRowSize dw ?
-		
-		
-		spaceS db ' $'
-		NewL db 10,13,'$'
+	
 		matrix dw ?
 
-        ;Mouse Varibles
-        MouseX dw ?
-        MouseY dw ?
+        ;Current Position 
+        pacmanX dw ?
+        pacmanY dw ?
 
 		;Boolean
 		Bool db 0 
-		isButtonOn db 0
 
-		;Buttons on
-		play db 0
-		Lb db 0
-		inst db 0
+
 
 
 CODESEG
@@ -93,245 +73,26 @@ start:
 ;		Openning Scrren
 
 	 call stratGraphicMode
-     call StratScreen
+    ; call StratScreen
 
-	 mov ax,0h
-	 int 33h
+     mov dx, offset Filename_Maze
+     mov [BmpLeft],0 ;start point
+     mov [BmpTop],0
+     mov [BmpColSize], FILE_COLS_SCREEN
+     mov [BmpRowSize] ,FILE_ROWS_SCREEN
+     call OpenShowBmp
 
-	 mov ax,1h
-	 int 33h
-
-CheckStatus:
-
-
-     mov ax, 3h
-	 int 33h	
-
-	 shr cx, 1
-	 mov [MouseX], cx
-	 mov [MouseY], dx
-
-
-	 push QUIT_LEFT_COL
-	 push QUIT_RIGHT_COL
-	 push QUIT_TOP_ROW
-	 push QUIT_BOTTOM_ROW
-	 call isInRange
- 
-	 cmp [Bool], 1
-	 jne PlayBanner
-	 
-	 cmp bx, 1
-	 je ExitShourtcut
-	 
-
-PlayBanner:
-
-	 push PLAY_LEFT_COL
-	 push PLAY_RIGHT_COL
-	 push PLAY_TOP_ROW
-	 push PLAY_BOTTOM_ROW
-	 call isInRange
-
-	 cmp [Bool], 1	
-	 jne LeaderBoardBanner
-
-	 cmp bx, 1
-	 je PlayClick
-
-	 cmp [isButtonOn], 1
-	 je CheckStatusShourtcut
-
-	 mov ax, 2
-	 int 33h
-
-	 mov [isButtonOn], 1
-	 call PlayButtonDisplay
-
-	 mov ax,1h
-	 int 33h
-
-	 jmp CheckStatus
-
-PlayClick:
-	 mov [play], 1
-
-ExitShourtcut:
-	 jmp EXIT
-
-	
-LeaderBoardBanner:
-
-	 push LB_LEFT_COL
-	 push LB_RIGHT_COL
-	 push LB_TOP_ROW
-	 push LB_BOTTOM_ROW
-	 call isInRange
-
-	 cmp [Bool], 1
-	 jne GameInstructionsBanner
-
-	 cmp bx, 1
-	 je LbClick
-
-	 cmp [isButtonOn], 1
-	 je CheckStatusShourtcut
-
-	 mov ax, 2
-	 int 33h
-
-	 mov [isButtonOn], 1
-	 call LbButtonDisplay
-
-	 mov ax,1h
-	 int 33h
-
-	 jmp CheckStatus
-
-CheckStatusShourtcut:
-	 jmp CheckStatus
-
-LbClick:
-	 mov [lb], 1
-	 jmp EXIT
-
-GameInstructionsBanner:
-
-	 push INST_LEFT_COL
-	 push INST_RIGHT_COL
-	 push INST_TOP_ROW
-	 push INST_BOTTOM_ROW
-	 call isInRange
-
-
-	 cmp [Bool], 1
-	 jne @@CleanScreen
-
-	 cmp bx, 1
-	 je InstClick
-
-	 cmp [isButtonOn], 1
-	 je CheckStatusShourtcut
-
-	 mov ax, 2
-	 int 33h
-
-	 mov [isButtonOn], 1
-	 call InstButtonDisplay
-
-	 mov ax,1h
-	 int 33h
-
-	 jmp CheckStatus
-
-@@CleanScreen:
-
-	 cmp [isButtonOn], 1
-	 jne CheckStatusShourtcut
-
-	 mov ax, 2
-	 int 33h
-
-	 mov [isButtonOn], 0
-     call StratScreen
-    
- 	 mov ax,1h
-	 int 33h
-
-	 jmp CheckStatus
-
-InstClick:
-	 mov [inst], 1
-
+     
 EXIT:
+
+     call ToWait
+     mov ah, 0
+     int 16h
 
 	 call finishGraphicMode
 	 mov ax, 4C00h ; returns control to dos
   	 int 21h
   
-
-;=============================================
-;Check if quit button is pressed
-;--------------------------------------------
-;Output:
-;varible Bool 1 true/ 0 false
-;=============================================
-proc isQuitPressed 
-
-	 push QUIT_LEFT_COL
-	 push QUIT_RIGHT_COL
-	 push QUIT_TOP_ROW
-	 push QUIT_BOTTOM_ROW
-	 call isInRange
- 
-	 ret
-
-endp isQuitPressed 
-
-;=============================================
-;Check mouse position on buttons
-;--------------------------------------------
-;Input: 
-;1- MouseX -> cx (shr cx, 1)
-;2- MouseY -> dx
-;Stack inputs:
-;left column, right column
-;top row, bottom row
-;--------------------------------------------
-;Registers:
-; ax, bp
-;--------------------------------------------
-;Output:
-;varible Bool 1 true/ 0 false
-;=============================================
-
-;Button values
-leftCol equ [bp + 10]
-rightCol equ [bp + 8]
-topRow equ [bp + 6]
-bottomRow equ [bp + 4]
-
-proc isInRange
-
-	 push bp
-	 mov bp, sp
-
- 	 push ax
-	 
-	 mov [Bool], 0
-
-Rows_Check:
-
-     ;mouse pos bigger than button edge
-	 mov ax, [MouseX]
-
-     cmp ax, rightCol
-	 ja @@ExitProc
-
-     cmp ax, leftCol
-	 jb @@ExitProc
-
-Col_Check:
-
-	 mov ax, [MouseY]
-
-     cmp ax, topRow
-	 jb @@ExitProc
-
-	 cmp ax, bottomRow
-	 ja @@ExitProc
-
-	 mov [Bool], 1
-
-
-@@ExitProc:
-
-	 pop ax
-     pop bp
-	 
-	 ret 4
-
-endp isInRange
 
 
 ;======================
@@ -339,67 +100,93 @@ endp isInRange
 ;=====================
 proc StratScreen
 
-     mov dx, offset Filename_StartScreen
+     mov dx, offset Filename_Maze
      mov [BmpLeft],0 ;start point
      mov [BmpTop],0
-     mov [BmpColSize], FILE_COLS
-     mov [BmpRowSize] ,FILE_ROWS
+     mov [BmpColSize], FILE_COLS_SCREEN
+     mov [BmpRowSize] ,FILE_ROWS_SCREEN
      call OpenShowBmp
 
      ret
 
 endp StratScreen
 
-;==================================
-;play button colored screen dispaly
-;==================================
-proc PlayButtonDisplay
+;=============================================
+;Shows pacman on scren
+;--------------------------------------------
+;Input: 
+;1- Direction (by big letter [North -> N])
+;2- CurrentXPos
+;3- CurrentYPos
+;--------------------------------------------
+;Registers:
+; dx, bp
+;--------------------------------------------
+;Output:
+;screen
+;=============================================
 
- 	 mov [MouseY], dx
-     mov dx, offset Filename_PlayButton
-     mov [BmpLeft],0 ;start point
-     mov [BmpTop],0
-     mov [BmpColSize], FILE_COLS
-     mov [BmpRowSize] ,FILE_ROWS
+    dirction equ [bp + 8]
+    xPos equ [bp + 6]
+    yPos equ [bp + 4]
+
+proc PacmanFigureDisplay_North
+
+     push bp
+     mov bp, sp
+
+     push dx
+     push ax
+
+
+North:
+
+     cmp dirction, 'N'
+     jne South
+
+     mov dx, offset Filename_PacmanNorth
+     jmp Dispaly
+
+South:
+
+     cmp dirction, 'S'
+     jne East
+
+     mov dx, offset Filename_PacmanSouth
+     jmp Dispaly
+
+East:
+
+     cmp dirction, 'E'
+     jne West
+
+     mov dx, offset Filename_PacmanEast
+     jmp Dispaly
+
+West:
+
+     mov dx, offset Filename_PacmanWest
+
+
+Display:
+
+     mov ax, yPos
+     mov [BmpLeft],ax
+     mov ax, xPos
+     mov [BmpTop],ax
+     mov [BmpColSize], FILE_COLS_PACMAN
+     mov [BmpRowSize] ,FILE_ROWS_PACMAN
      call OpenShowBmp
 
-     ret
+     pop ax
+     pop dx
+     pop bp
 
-endp PlayButtonDisplay
+     ret 2
 
-;==========================================
-;leaderboard button colored screen dispaly
-;=========================================
-proc LbButtonDisplay
+endp PacmanFigureDisplay
 
-	 mov [MouseY], dx
-     mov dx, offset Filename_LbButton
-     mov [BmpLeft],0 ;start point
-     mov [BmpTop],0
-     mov [BmpColSize], FILE_COLS
-     mov [BmpRowSize] ,FILE_ROWS
-     call OpenShowBmp
 
-	 ret
-
-endp LbButtonDisplay
-
-;===============================================
-;Game instructions button colored screen dispaly
-;===============================================
-proc InstButtonDisplay
-
-	 mov [MouseY], dx
-     mov dx, offset Filename_InstButton
-     mov [BmpLeft],0 ;start point
-     mov [BmpTop],0
-     mov [BmpColSize], FILE_COLS
-     mov [BmpRowSize] ,FILE_ROWS
-     call OpenShowBmp 
-
-	 ret
-
-endp InstButtonDisplay
 ;============================================================================================
 ;=======================
 ;Put bmp file on screen
