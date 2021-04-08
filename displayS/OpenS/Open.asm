@@ -4,7 +4,7 @@ STACK 100h
 
 
 
-FILENAME_SCREEN equ 'Maze.bmp'
+FILENAME_SCREEN equ 'Screen.bmp'
 FILENAME_PLAY equ 'Play.bmp'
 FILENAME_LB equ 'lb.bmp'
 FILENAME_Inst equ 'Inst.bmp'
