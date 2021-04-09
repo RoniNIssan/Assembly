@@ -1,6 +1,6 @@
 	IDEAL
 MODEL small 
-STACK 100h	
+STACK 120h	
 
 
 
@@ -68,8 +68,8 @@ DATASEG
 		matrix dw ?
 
         ;Current Position 
-        pacmanX dw 141
-        pacmanY dw 88
+        pacmanX dw 86
+        pacmanY dw 141
 		pacmanCurrentDirection dw 'A'
 
 		;Boolean
@@ -308,56 +308,33 @@ start:
 	 call PacmanFigureDisplay
 
 MainLoop:
-	 
+
      mov ah, 1
 	 int 16h
+
+     jz MainLoop 
+
+     mov ah, 0
+	 int 16h
+
+     ;push NEXT_POS_ADDED_PIXELS_X
+     ;call setCurrentX
      
-     jnz MainLoop 
-
-
-     mov bx, offset mazeMatrix
-     add bx, [pacmanX]
-
-     push ax ;saving al value
-     mov ax, 320
-     mul [pacmanY]
-
-     add bx, ax ;bx contains maxeMatrix in current pos offset
-
-     pop ax
-
-     cmp al, 'A'
-	 je @@TurnWest
-	 cmp al, 'D'
-	 je @@TurnEast
-	 cmp al, 'S'
-	 je @@TurnSouth
-     jne @@TurnNorth ; 'W'
-
-@@TurnWest:
-
+	 push [pacmanX]
+	 push [pacmanY]
      call removePacman
 
-     push NEXT_POS_ADDED_PIXELS_X
-     call setCurrentX
+     add [pacmanX], 8
+	 push [pacmanCurrentDirection]
+	 push [pacmanX]
+	 push [pacmanY]
+	 call PacmanFigureDisplay
 
-     cmp [byte ptr bx + NEXT_POS_ADDED_PIXELS_X], 1
-     je MainLoop
+     jmp MainLoop
 
-     push 'A'
-     push [pacmanX]
-     push [pacmanY]
-     call PacmanDisplay
-
-    jmp MainLoop
-
-@@TurnEast:
-@@TurnSouth:
-@@TurnNorth:
           
 EXIT:
 
-     ;call ToWait
      mov ah, 0
      int 16h
 
@@ -389,32 +366,33 @@ endp StratScreen
 ;remove pacman figure
 ;=====================
 
-X equ [bp + 6]
-Y equ [bp + 4]
+currentX equ [bp + 6]
+currentY equ [bp + 4]
 
-result equ [bp - 2]
 proc removePacman
 
      push bp
      mov bp, sp
 
-     sub sp, 2
-
 	 lea cx, [pacmanBlank]
 	 mov [matrix] , cx
+
 	 mov dx, FILE_COLS_PACMAN
 	 mov cx, FILE_ROWS_PACMAN
-     add di, X
-     mov ax, 320
-     mul [bp + 4]
+
+     mov di, currentY 
+     ;currentY * 320
+     shl di, 8
+     shl ax, 6
+
      add di, ax
+     add di, currentX
 
 	 call putMatrixInScreen
 
-     add sp, 2
 
      pop bp
-     ret
+     ret 4
  
 endp removePacman
 
@@ -564,9 +542,9 @@ proc PacmanFigureDisplay
 
 PacmanDisplay:
 
-     mov ax, yPos
-     mov [BmpLeft],ax
      mov ax, xPos
+     mov [BmpLeft],ax
+     mov ax, yPos
      mov [BmpTop],ax
      mov [BmpColSize], FILE_COLS_PACMAN
      mov [BmpRowSize] ,FILE_ROWS_PACMAN
@@ -576,7 +554,7 @@ PacmanDisplay:
      pop dx
      pop bp
 
-     ret 2
+     ret 6
 
 endp PacmanFigureDisplay
 
