@@ -381,6 +381,7 @@ proc removePacman
 	 mov cx, FILE_ROWS_PACMAN
 
      mov di, currentY 
+     mov ax, currentY 
      ;currentY * 320
      shl di, 8
      shl ax, 6
