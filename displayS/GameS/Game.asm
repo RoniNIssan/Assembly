@@ -30,7 +30,8 @@ QUIT_TOP_ROW = 6
 QUIT_BOTTOM_ROW = 31
 
 ;Pacman values
-GAME_RIGHT_BOUNDARY = 191
+MAZE_RIGHT_BOUNDARY_X = 167
+MAZE_LEFT_BOUNDARY_X = 13
 
 PACMAN_HIGHET = 9
 PACMAN_WIDTH = 9
@@ -70,7 +71,8 @@ DATASEG
         ;Current Position 
         pacmanX dw 86
         pacmanY dw 141
-		pacmanCurrentDirection dw 'A'
+        currentPoint dw ?
+		pacmanCurrentDirection dw 'D'
 
 		;Boolean
 		Bool db 0 
@@ -302,6 +304,8 @@ start:
 	 call stratGraphicMode
      call StratScreen
 
+     call setPacmanCurrentPoint
+
 	 push [pacmanCurrentDirection]
 	 push [pacmanX]
 	 push [pacmanY]
@@ -309,22 +313,132 @@ start:
 
 MainLoop:
 
+     mov ah, 8 ;clean keyboard buffer
+     int 21h
+
      mov ah, 1
 	 int 16h
 
      jz MainLoop 
 
-     mov ah, 0
-	 int 16h
+     ;mov ah, 0
+	 ;int 16h
 
-     ;push NEXT_POS_ADDED_PIXELS_X
-     ;call setCurrentX
+     cmp al, 'W'
+     je North
+
+     cmp al, 'S'
+     je South
+
+     cmp al, 'D'
+     je East
+     jne WestShortcut
+
+
+
+North:
+
+     call setPacmanCurrentPoint
      
+     push [currentPoint]
+     call is_turnFront
+
+     cmp [Bool], 1
+     jne MainLoop
+
 	 push [pacmanX]
 	 push [pacmanY]
      call removePacman
 
-     add [pacmanX], 8
+     push 'W'
+     call setCurrentDirection
+
+	 push [pacmanCurrentDirection]
+	 push [pacmanX]
+	 push [pacmanY]
+	 call PacmanFigureDisplay
+
+     jmp MainLoop
+
+WestShortcut:
+     jmp West
+South:
+
+     call setPacmanCurrentPoint
+     
+     push [currentPoint]
+     call is_turnBack
+
+     cmp [Bool], 1
+     jne MainLoop
+
+	 push [pacmanX]
+	 push [pacmanY]
+     call removePacman
+     
+     push 'S'
+     call setCurrentDirection
+
+	 push [pacmanCurrentDirection]
+	 push [pacmanX]
+	 push [pacmanY]
+	 call PacmanFigureDisplay
+
+     ;jmp MainLoop
+
+MainLoopShortcut:
+     jmp MainLoop
+
+East:
+
+     call setPacmanCurrentPoint
+     
+     push [currentPoint]
+     call is_turnRight
+
+     cmp [Bool], 1
+     jne MainLoopShortcut
+
+	 push [pacmanX]
+	 push [pacmanY]
+     call removePacman
+     
+     push 'D'
+     call setCurrentDirection
+
+	 push [pacmanCurrentDirection]
+	 push [pacmanX]
+	 push [pacmanY]
+	 call PacmanFigureDisplay
+
+     jmp MainLoopShortcut
+
+West:
+
+     call setPacmanCurrentPoint
+     
+     push [currentPoint]
+     call is_turnLeft
+
+     cmp [Bool], 1
+     jne MainLoopShortcut
+
+	 push [pacmanX]
+	 push [pacmanY]
+     call removePacman
+     
+     push 'A'
+     call setCurrentDirection
+
+	 push [pacmanCurrentDirection]
+	 push [pacmanX]
+	 push [pacmanY]
+	 call PacmanFigureDisplay
+
+     jmp MainLoopShortcut
+
+NoChange:
+ 
 	 push [pacmanCurrentDirection]
 	 push [pacmanX]
 	 push [pacmanY]
@@ -349,8 +463,6 @@ EXIT:
 ;=====================
 proc StratScreen
 
-
-
 	 lea cx, [mazeMatrix]
 	 mov [matrix] , cx
 	 mov dx, FILE_COLS_SCREEN
@@ -362,10 +474,19 @@ proc StratScreen
 
 endp StratScreen
 
-;======================
-;remove pacman figure
-;=====================
-
+;=============================================
+;Remove pacman and dots (9*9)
+;--------------------------------------------
+;Input: 
+;1- CurrentXPos
+;2- CurrentYPos
+;--------------------------------------------
+;Registers:
+;bp, cx, dx, di, ax
+;--------------------------------------------
+;Output:
+;screen
+;=============================================
 currentX equ [bp + 6]
 currentY equ [bp + 4]
 
@@ -374,11 +495,16 @@ proc removePacman
      push bp
      mov bp, sp
 
+     push cx
 	 lea cx, [pacmanBlank]
 	 mov [matrix] , cx
-
+     
+     push dx
 	 mov dx, FILE_COLS_PACMAN
 	 mov cx, FILE_ROWS_PACMAN
+
+     push di
+     push ax
 
      mov di, currentY 
      mov ax, currentY 
@@ -391,98 +517,18 @@ proc removePacman
 
 	 call putMatrixInScreen
 
-
+     pop ax
+     pop di
+     pop dx
+     pop cx
      pop bp
+
      ret 4
  
 endp removePacman
 
-;====================================
-;Proc setCurrentX
-;Input: 
-;- value added to next X position
-;Output
-;- new X value into static integer currentX
-;====================================
-
-	xAddition equ [bp + 4]
-	nextX equ [bp - 2] ;presented by ax
-
-proc setCurrentX
-
-	push bp
-	mov bp, sp
-
-	push ax
-
-	sub sp, 2 ;varible contains X new value
-	mov ax,  [pacmanX]
-	add ax, xAddition
-
-	cmp ax, GAME_RIGHT_BOUNDARY
-	jb @@ExitProc
-
-FixValue:
-
-	sub ax, -GAME_RIGHT_BOUNDARY
-
-@@ExitProc:
-
-	mov nextX, ax
-	pop [pacmanX] ;nextX -> currentX
-	pop ax
-	pop bp 
-	 
-	ret
-
-endp setCurrentX
-	
-;====================================
-;Proc setCurrentX
-;Input: 
-;- value added to next X position
-;Output
-;- new X value into static integer currentX
-;====================================
-
-	yAddition equ [bp + 4]
-	nextY equ [bp - 2]
-
-proc setCurrentY
-
-	push bp
-	mov bp, sp
-
-	pop ax
-
-	sub sp, 2 ;varible contains X new value
-	mov ax, [pacmanY] 
-	add ax,yAddition
-
-	mov nextY, ax
-
-	pop [pacmanY] ;nextY -> currentY
-	pop bp 
-	 
-	ret
-
-endp setCurrentY
-;===================================================
-;Proc setCurrentDirection
-;Input: 
-;- next Direction
-;Output
-;- new direction in static varible currentDirection
-;===================================================
-proc setCurrentDirection
-
-	 pop [pacmanCurrentDirection]
-	 
-	ret
-
-endp setCurrentDirection	
 ;=============================================
-;Shows pacman on scren
+;Shows pacman on screen
 ;--------------------------------------------
 ;Input: 
 ;1- Direction (by big letter [North -> N])
@@ -558,6 +604,223 @@ PacmanDisplay:
      ret 6
 
 endp PacmanFigureDisplay
+
+
+proc setCurrentDirection
+
+	 pop [pacmanCurrentDirection]
+	 
+	ret
+
+endp setCurrentDirection	
+
+proc setPacmanCurrentPoint
+
+     push di
+     push ax
+
+     mov di, [pacmanY] 
+     mov ax, [pacmanY] 
+     ;currentY * 320
+     shl di, 8
+     shl ax, 6
+     add di, ax
+     add di, [pacmanX]
+     mov [currentPoint], di
+
+     pop ax
+     pop di
+
+     ret
+
+endp setPacmanCurrentPoint
+
+
+;====================================
+;Proc is_turnRight
+;Input: 
+;-current point (gets from super where calculated)
+;Output
+;-able or unable to turn [Boolean varible]
+;====================================
+currentPos equ [bp + 4] ;pushed
+
+proc is_turnRight
+
+	push bp
+	mov bp, sp
+
+    push bx
+    push ax
+
+    mov bx, offset mazeMatrix
+
+    add currentPos, DISTANCE_FROM_BOUNDARY_X
+	;mov ax,  [currentPoint + DISTANCE_FROM_BOUNDARY_X]
+   ; add bx, ax
+
+    add bx, currentPos
+
+	cmp [byte ptr bx], 1
+	jne @@ExitProc
+
+@@True:
+
+	mov [Bool], 1
+
+	
+@@ExitProc:
+
+	;sp points on currentPoint
+	;sp sub 2 -> reach bp
+	;sp points on ip then pop ip and currentPoint
+	;sub sp, 2
+    pop ax
+    pop bx
+	pop bp
+
+	ret 2
+
+
+endp is_turnRight
+
+;====================================
+;Proc is_turnLeft
+;Input: 
+;-current point (gets from super where calculated)
+;Output
+;-able or unable to turn [Boolean varible]
+;====================================
+currentPos equ [bp + 4] ;pushed
+
+proc is_turnLeft
+
+	push bp
+	mov bp, sp
+
+    push bx
+    push ax
+
+    mov bx, offset mazeMatrix
+
+    sub currentPos, DISTANCE_FROM_BOUNDARY_X
+	;mov ax,  currentPoint - DISTANCE_FROM_BOUNDARY_X
+    add bx, currentPos
+
+	cmp [byte ptr bx], 1
+	jne @@ExitProc
+
+@@True:
+
+	mov [Bool], 1
+
+	
+@@ExitProc:
+
+	;sp points on currentPoint
+	;sp sub 2 -> reach bp
+	;sp points on ip then pop ip and currentPoint
+	;sub sp, 2
+    pop ax
+    pop bx
+	pop bp
+
+	ret 2
+
+endp is_turnLeft
+
+;====================================
+;Proc is_turnBack
+;Input: 
+;-current point (gets from super where calculated)
+;Output
+;-able or unable to turn [Boolean varible]
+;====================================
+    currentPos equ [bp + 4] 
+
+proc is_turnBack
+
+	push bp
+	mov bp, sp
+
+    push ax
+    push bx
+
+	mov [Bool], 0 ;false
+
+    mov bx, offset mazeMatrix
+
+    sub currentPos, DISTANCE_FROM_BOUNDARY_Y * 320
+	;mov ax,  [currentPoint - DISTANCE_FROM_BOUNDARY_Y * 320]
+    add bx, currentPos
+
+	cmp [byte ptr bx], 1
+	jne @@ExitProc
+
+@@True:
+
+	mov [Bool], 1
+	
+@@ExitProc:
+
+	;sp points on currentPoint
+	;sp sub 2 -> reach bp
+	;sp points on ip then pop ip and currentPoint
+
+	;sub sp, 2
+
+    pop bx
+    pop ax
+	pop bp
+
+	ret 2
+
+endp is_turnBack
+
+;====================================
+;Proc is_turnFront
+;Input: 
+;-current point (gets from super where calculated)
+;Output
+;-able or unable to turn [Boolean varible]
+;====================================
+currentPos equ [bp + 4] ;pushed
+
+proc is_turnFront
+
+	push bp
+	mov bp, sp
+
+    push bx
+    push ax
+
+    mov bx, offset mazeMatrix
+
+    add currentPos, DISTANCE_FROM_BOUNDARY_Y * 320
+	;mov ax,  [currentPoint + DISTANCE_FROM_BOUNDARY_Y * 320]
+    add bx, currentPos
+
+	cmp [byte ptr bx], 1
+	jne @@ExitProc
+
+@@True:
+
+	mov [Bool], 1
+
+	
+@@ExitProc:
+
+	;sp points on currentPoint
+	;sp sub 2 -> reach bp
+	;sp points on ip then pop ip and currentPoint
+	;sub sp, 2
+    pop ax
+    pop bx
+	pop bp
+
+	ret 2
+
+endp is_turnFront
 
 ;============================================================================================
 ;=======================
