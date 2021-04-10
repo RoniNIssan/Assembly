@@ -72,7 +72,6 @@ DATASEG
         pacmanX dw 86
         pacmanY dw 141
         currentPoint dw ?
-        currentPoint_test dw ?
 		pacmanCurrentDirection dw 'D'
 
 		;Boolean
@@ -326,35 +325,40 @@ MainLoop:
 
      cmp al, 'W'
      je North
+     cmp al, 'w'
+     je North
+
 
      cmp al, 'S'
      je South
+     cmp al, 's'
+     je South
 
      cmp al, 'D'
-     je East
+     je EastShortcut
+     cmp al, 'd'
+     je EastShortcut
 
      cmp al, 'A'
      je WestShortcut
+     cmp al, 'a'
+     je WestShortcut
+
      jne MainLoop 
 
 North:
 
-     ;call setPacmanCurrentPoint
-     
-     ;push [currentPoint]
-     ;call is_turnFront
+     call setPacmanCurrentPoint
 
+     push [currentPoint]
+     call is_turnFront
 
-
-     ;cmp [Bool], 1
-     ;jne MainLoop
+     cmp [Bool], 1
+     jne MainLoop
 
 	 push [pacmanX]
 	 push [pacmanY]
      call removePacman
-
-     ;push 'W'
-     ;call setCurrentDirection
 
 	 mov [pacmanCurrentDirection], 'W'
 
@@ -370,23 +374,23 @@ North:
 
 WestShortcut:
      jmp West
+
+EastShortcut:
+     jmp East
 South:
 
-     ;call setPacmanCurrentPoint
+     call setPacmanCurrentPoint
      
-     ;push [currentPoint]
-     ;call is_turnBack
+     push [currentPoint]
+     call is_turnBack
 
-    ; cmp [Bool], 1
-     ;jne MainLoop
+     cmp [Bool], 1
+     jne MainLoop
 
 	 push [pacmanX]
 	 push [pacmanY]
      call removePacman
      
-     ;push 'S'
-     ;call setCurrentDirection
-
 	 mov [pacmanCurrentDirection], 'S'
 
 	 add [pacmanY], NEXT_POS_ADDED_PIXELS_Y
@@ -396,22 +400,20 @@ South:
 	 push [pacmanY]
 	 call PacmanFigureDisplay
 
-     ;jmp MainLoop
-
 MainLoopShortcut:
      jmp MainLoop
 
 East:
 
-     ;call setPacmanCurrentPoint
+     call setPacmanCurrentPoint
 
+     push [currentPoint]
+     call is_turnRight
+     
 	 push [pacmanX]
 	 push [pacmanY]
      call removePacman
      
-    ; push 'D'
-     ;call setCurrentDirection
-
 	 mov [pacmanCurrentDirection], 'D'
 
 	 add [pacmanX], NEXT_POS_ADDED_PIXELS_X
@@ -426,20 +428,18 @@ East:
 
 West:
 
-     ;call setPacmanCurrentPoint
-     
-     ;push [currentPoint]
-     ;call is_turnLeft
+     call setPacmanCurrentPoint
 
-     ;cmp [Bool], 1
-     ;jne MainLoopShortcut
+     push [currentPoint]
+     call is_turnLeft
+
+     cmp [Bool], 1
+     jne MainLoopShortcut
 
 	 push [pacmanX]
 	 push [pacmanY]
      call removePacman
      
-     ;push 'A'
-     ;call setCurrentDirection
 	 mov [pacmanCurrentDirection], 'A'
 
 	 sub [pacmanX], NEXT_POS_ADDED_PIXELS_X
@@ -620,14 +620,6 @@ PacmanDisplay:
 endp PacmanFigureDisplay
 
 
-proc setCurrentDirection
-
-	 pop [pacmanCurrentDirection]
-	 
-	ret
-
-endp setCurrentDirection	
-
 proc setPacmanCurrentPoint
 
      push di
@@ -670,11 +662,8 @@ proc is_turnRight
 
     mov bx, offset mazeMatrix
 
-    add currentPos, DISTANCE_FROM_BOUNDARY_X
-	;mov ax,  [currentPoint + DISTANCE_FROM_BOUNDARY_X]
-   ; add bx, ax
-
     add bx, currentPos
+    add bx, NEXT_POS_ADDED_PIXELS_X
 
 	cmp [byte ptr bx], 1
 	jne @@ExitProc
@@ -718,9 +707,8 @@ proc is_turnLeft
 
     mov bx, offset mazeMatrix
 
-    sub currentPos, DISTANCE_FROM_BOUNDARY_X
-	;mov ax,  currentPoint - DISTANCE_FROM_BOUNDARY_X
     add bx, currentPos
+    sub bx, NEXT_POS_ADDED_PIXELS_X
 
 	cmp [byte ptr bx], 1
 	jne @@ExitProc
@@ -765,9 +753,8 @@ proc is_turnBack
 
     mov bx, offset mazeMatrix
 
-    sub currentPos, DISTANCE_FROM_BOUNDARY_Y * 320
-	;mov ax,  [currentPoint - DISTANCE_FROM_BOUNDARY_Y * 320]
     add bx, currentPos
+    add bx, NEXT_POS_ADDED_PIXELS_Y * MAZE_RIGHT_BOUNDARY_X
 
 	cmp [byte ptr bx], 1
 	jne @@ExitProc
@@ -811,9 +798,8 @@ proc is_turnFront
 
     mov bx, offset mazeMatrix
 
-    add currentPos, DISTANCE_FROM_BOUNDARY_Y * 320
-	;mov ax,  [currentPoint + DISTANCE_FROM_BOUNDARY_Y * 320]
     add bx, currentPos
+    sub bx, NEXT_POS_ADDED_PIXELS_Y * MAZE_RIGHT_BOUNDARY_X
 
 	cmp [byte ptr bx], 1
 	jne @@ExitProc

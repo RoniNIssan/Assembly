@@ -1,0 +1,6 @@
+
+
+Pacman on maze:
+1. arrange distance from boundaries
+2. control pacman with lower key (both A and a)
+3. check id there's boundary
