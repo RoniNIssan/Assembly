@@ -72,6 +72,7 @@ DATASEG
         pacmanX dw 86
         pacmanY dw 141
         currentPoint dw ?
+        currentPoint_test dw ?
 		pacmanCurrentDirection dw 'D'
 
 		;Boolean
@@ -313,16 +314,15 @@ start:
 
 MainLoop:
 
-     mov ah, 8 ;clean keyboard buffer
-     int 21h
+	 ;mov ah,08h   ;Cleans keyboard buffer       
+	 ;int 21h
 
-     mov ah, 1
+     ;mov ah, 1
+	 ;int 16h
+
+	 mov ah, 0
 	 int 16h
 
-     jz MainLoop 
-
-     ;mov ah, 0
-	 ;int 16h
 
      cmp al, 'W'
      je North
@@ -332,26 +332,34 @@ MainLoop:
 
      cmp al, 'D'
      je East
-     jne WestShortcut
 
-
+     cmp al, 'A'
+     je WestShortcut
+     jne MainLoop 
 
 North:
 
-     call setPacmanCurrentPoint
+     ;call setPacmanCurrentPoint
      
-     push [currentPoint]
-     call is_turnFront
+     ;push [currentPoint]
+     ;call is_turnFront
 
-     cmp [Bool], 1
-     jne MainLoop
+
+
+     ;cmp [Bool], 1
+     ;jne MainLoop
 
 	 push [pacmanX]
 	 push [pacmanY]
      call removePacman
 
-     push 'W'
-     call setCurrentDirection
+     ;push 'W'
+     ;call setCurrentDirection
+
+	 mov [pacmanCurrentDirection], 'W'
+
+	 sub [pacmanY], NEXT_POS_ADDED_PIXELS_Y
+
 
 	 push [pacmanCurrentDirection]
 	 push [pacmanX]
@@ -364,20 +372,24 @@ WestShortcut:
      jmp West
 South:
 
-     call setPacmanCurrentPoint
+     ;call setPacmanCurrentPoint
      
-     push [currentPoint]
-     call is_turnBack
+     ;push [currentPoint]
+     ;call is_turnBack
 
-     cmp [Bool], 1
-     jne MainLoop
+    ; cmp [Bool], 1
+     ;jne MainLoop
 
 	 push [pacmanX]
 	 push [pacmanY]
      call removePacman
      
-     push 'S'
-     call setCurrentDirection
+     ;push 'S'
+     ;call setCurrentDirection
+
+	 mov [pacmanCurrentDirection], 'S'
+
+	 add [pacmanY], NEXT_POS_ADDED_PIXELS_Y
 
 	 push [pacmanCurrentDirection]
 	 push [pacmanX]
@@ -391,20 +403,19 @@ MainLoopShortcut:
 
 East:
 
-     call setPacmanCurrentPoint
-     
-     push [currentPoint]
-     call is_turnRight
-
-     cmp [Bool], 1
-     jne MainLoopShortcut
+     ;call setPacmanCurrentPoint
 
 	 push [pacmanX]
 	 push [pacmanY]
      call removePacman
      
-     push 'D'
-     call setCurrentDirection
+    ; push 'D'
+     ;call setCurrentDirection
+
+	 mov [pacmanCurrentDirection], 'D'
+
+	 add [pacmanX], NEXT_POS_ADDED_PIXELS_X
+
 
 	 push [pacmanCurrentDirection]
 	 push [pacmanX]
@@ -415,20 +426,23 @@ East:
 
 West:
 
-     call setPacmanCurrentPoint
+     ;call setPacmanCurrentPoint
      
-     push [currentPoint]
-     call is_turnLeft
+     ;push [currentPoint]
+     ;call is_turnLeft
 
-     cmp [Bool], 1
-     jne MainLoopShortcut
+     ;cmp [Bool], 1
+     ;jne MainLoopShortcut
 
 	 push [pacmanX]
 	 push [pacmanY]
      call removePacman
      
-     push 'A'
-     call setCurrentDirection
+     ;push 'A'
+     ;call setCurrentDirection
+	 mov [pacmanCurrentDirection], 'A'
+
+	 sub [pacmanX], NEXT_POS_ADDED_PIXELS_X
 
 	 push [pacmanCurrentDirection]
 	 push [pacmanX]
@@ -620,11 +634,12 @@ proc setPacmanCurrentPoint
      push ax
 
      mov di, [pacmanY] 
-     mov ax, [pacmanY] 
-     ;currentY * 320
-     shl di, 8
-     shl ax, 6
-     add di, ax
+
+     ;currentY * right boundary ("smaller screen")
+	 mov ax, MAZE_RIGHT_BOUNDARY_X
+	 mul di
+	 mov di, ax 
+
      add di, [pacmanX]
      mov [currentPoint], di
 
