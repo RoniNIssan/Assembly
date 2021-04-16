@@ -69,7 +69,7 @@ DATASEG
 		matrix dw ?
 
         ;Current Position 
-        pacmanX dw 43
+        pacmanX dw 86
         pacmanY dw 142
         currentPoint dw ?
 		pacmanCurrentDirection dw 'A'
@@ -304,11 +304,8 @@ proc FindNextAddedX_West
 	cmp al, 0FCh
 	jne @@ExitProc
 
-	;mov cx, normalizedY
-	;mov dx, nextX
-	inc dx
+	mov dx, currentX 
 	mov ah,0Dh
-
 @@FindClosestNextX:
 
 	int 10h
@@ -320,13 +317,12 @@ proc FindNextAddedX_West
 
 @@ReturnClosestNextX:
 
-	inc dx
+	;inc dx
 	cmp dx, nextX
 	ja @@CountSmaller
 
 @@CountSmaller:
 
-	;add dx, currentX
 	mov nextX, dx
 
 	jmp @@ExitProc
