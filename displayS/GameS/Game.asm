@@ -72,7 +72,7 @@ DATASEG
         pacmanX dw 86
         pacmanY dw 141
         currentPoint dw ?
-		pacmanCurrentDirection dw 'D'
+		pacmanCurrentDirection dw 'A'
 
 		;Boolean
 		Bool db 0 
@@ -313,21 +313,13 @@ start:
 
 MainLoop:
 
-	 ;mov ah,08h   ;Cleans keyboard buffer       
-	 ;int 21h
-
-     ;mov ah, 1
-	 ;int 16h
-
 	 mov ah, 0
 	 int 16h
-
 
      cmp al, 'W'
      je North
      cmp al, 'w'
      je North
-
 
      cmp al, 'S'
      je South
