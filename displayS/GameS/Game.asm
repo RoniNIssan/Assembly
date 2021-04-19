@@ -1,6 +1,6 @@
 	IDEAL
 MODEL small 
-STACK 120h	
+STACK 100h	
 
 
 FILENAME_MAZE_DISPLAY equ 'Maze.bmp'
@@ -20,8 +20,8 @@ BOUNDARIES_COLOR = 1
 BACKGROUND_COLOR = 0
 
 ;Pacman figure 
-FILE_ROWS_PACMAN = 9
-FILE_COLS_PACMAN = 9 
+FILE_ROWS_PACMAN = 7
+FILE_COLS_PACMAN = 7 
 
 ;Quit Banner values
 QUIT_RIGHT_COL = 34
@@ -33,11 +33,8 @@ QUIT_BOTTOM_ROW = 31
 MAZE_RIGHT_BOUNDARY_X = 167
 MAZE_LEFT_BOUNDARY_X = 13
 
-PACMAN_HIGHET = 9
-PACMAN_WIDTH = 9
-
-NEXT_POS_ADDED_PIXELS_Y = 9
-NEXT_POS_ADDED_PIXELS_X = 9
+NEXT_POS_ADDED_PIXELS_Y = 7
+NEXT_POS_ADDED_PIXELS_X = 7
 
 
 ;Needed when turn:
@@ -82,15 +79,13 @@ DATASEG
 		isDirectionChanged dw 0
 		
 
-pacmanBlank db	0,0,0,0,0,0,0,0,0
-            db	0,0,0,0,0,0,0,0,0
-            db	0,0,0,0,0,0,0,0,0
-            db	0,0,0,0,0,0,0,0,0
-            db	0,0,0,0,0,0,0,0,0
-            db	0,0,0,0,0,0,0,0,0
-            db	0,0,0,0,0,0,0,0,0
-            db	0,0,0,0,0,0,0,0,0
-            db	0,0,0,0,0,0,0,0,0
+pacmanBlank db	0,0,0,0,0,0,0
+            db	0,0,0,0,0,0,0
+            db	0,0,0,0,0,0,0
+            db	0,0,0,0,0,0,0
+            db	0,0,0,0,0,0,0
+            db	0,0,0,0,0,0,0
+            db	0,0,0,0,0,0,0
 
 
 CODESEG
@@ -154,17 +149,15 @@ North:
      call removePacman
 
 	 mov [pacmanCurrentDirection], 'W'
-	 sub [pacmanY], NEXT_POS_ADDED_PIXELS_Y
 
-	 mov ax, [pacmanCurrentDirection]
-	 cmp ax, [pacmanLastDirection]
+	 ;sub [pacmanY], NEXT_POS_ADDED_PIXELS_Y
 
-	 je @@Continue
-
-	 ;add [pacmanX], 1
-	 mov [pacmanLastDirection], ax
-
-@@Continue: 
+	 push [pacmanX]
+	 push [pacmanY]
+	 
+	 call FindNextAddedY_North
+	 
+	 pop [pacmanY]
 
 	 push [pacmanCurrentDirection]
 	 push [pacmanX]
@@ -191,17 +184,13 @@ South:
      
 	 mov [pacmanCurrentDirection], 'S'
 	 
-	 add [pacmanY], NEXT_POS_ADDED_PIXELS_Y
-
-	 mov ax, [pacmanCurrentDirection]
-	 cmp ax, [pacmanLastDirection]
+	 ;add [pacmanY], NEXT_POS_ADDED_PIXELS_Y
+	 push [pacmanX]
+	 push [pacmanY]
 	 
-	 je @@Continue
-
-	 mov [pacmanLastDirection], ax
-	 add [pacmanX], 1
-
-@@Continue: 
+	 call FindNextAddedY_South
+	 
+	 pop [pacmanY]
 
 	 push [pacmanCurrentDirection]
 	 push [pacmanX]
@@ -220,17 +209,14 @@ East:
      call removePacman
      
 	 mov [pacmanCurrentDirection], 'D'
-	 add [pacmanX], NEXT_POS_ADDED_PIXELS_X
-
-	 mov ax, [pacmanCurrentDirection]
-	 cmp ax, [pacmanLastDirection]
 	 
-	 je @@Continue
-
-	 mov [pacmanLastDirection], ax
-	 add [pacmanY], 2
-
-@@Continue: 
+	 ;add [pacmanX], NEXT_POS_ADDED_PIXELS_X
+	 push [pacmanX]
+	 push [pacmanY]
+	 
+	 call FindNextAddedX_East
+	 
+	 pop [pacmanX]
 
 	 push [pacmanCurrentDirection]
 	 push [pacmanX]
@@ -252,17 +238,13 @@ West:
      
 	 mov [pacmanCurrentDirection], 'A'
 
-	 sub [pacmanX], NEXT_POS_ADDED_PIXELS_X
-
-	 mov ax, [pacmanCurrentDirection]
-	 cmp ax, [pacmanLastDirection]
+	 ;sub [pacmanX], NEXT_POS_ADDED_PIXELS_X
+	 push [pacmanX]
+	 push [pacmanY]
 	 
-	 je @@Continue
-
-	 mov [pacmanLastDirection], ax
-	 sub [pacmanX], 2
-
-@@Continue: 
+	 call FindNextAddedX_West
+	 
+	 pop [pacmanX]
 
 	 push [pacmanCurrentDirection]
 	 push [pacmanX]
@@ -270,16 +252,6 @@ West:
 	 call PacmanFigureDisplay
 
      jmp MainLoopShortcut
-
-NoChange:
- 
-	 push [pacmanCurrentDirection]
-	 push [pacmanX]
-	 push [pacmanY]
-	 call PacmanFigureDisplay
-
-     jmp MainLoop
-
           
 EXIT:
 
@@ -308,6 +280,339 @@ proc StratScreen
 
 endp StratScreen
 
+;=============================================
+;Find next X value considering bounderies.
+;--------------------------------------------
+;Input: 
+;1- CurrentXPos
+;2- CurrentYPos
+;--------------------------------------------
+;Registers:
+;bp, cx, dx, ax
+;--------------------------------------------
+;Output:
+;nextX value - stack
+;=============================================
+currentX equ [bp + 6]
+currentY equ [bp + 4]
+nextX equ [bp - 6]
+
+proc FindNextAddedX_West
+
+	push bp
+	mov bp, sp
+
+	push ax
+	push dx
+	push cx
+
+	mov ax, currentX
+	mov nextX, ax
+	sub nextX, NEXT_POS_ADDED_PIXELS_X
+
+	mov cx, currentY
+	mov dx, nextX
+	mov ah,0Dh
+	int 10h
+	
+	cmp al, 1
+	jne @@ExitProc
+
+	mov cx, currentY
+	mov dx, currentX
+	mov ah,0Dh
+
+@@FindClosestNextX:
+
+	int 10h
+
+	cmp al, 1
+	jne @@FindClosestNextX
+
+	dec dx
+
+@@ReturnClosestNextX:
+
+	inc dx
+	cmp dx, NEXT_POS_ADDED_PIXELS_X
+	ja @@NEXT_POS_ADDED_PIXELS_XSmaller
+
+@@CountSmaller:
+
+	add dx, currentX
+	mov nextX, dx
+
+	jmp @@ExitProc
+
+@@NEXT_POS_ADDED_PIXELS_XSmaller:
+
+	sub nextX, NEXT_POS_ADDED_PIXELS_X
+
+@@ExitProc:
+	 
+	mov dx, nextX
+	mov currentX, dx
+
+	pop cx
+	pop dx
+	pop ax
+
+	pop bp
+
+	ret 2	 
+
+endp FindNextAddedX_West
+;=============================================
+;Find next X value considering bounderies.
+;--------------------------------------------
+;Input: 
+;1- CurrentXPos
+;2- CurrentYPos
+;--------------------------------------------
+;Registers:
+;bp, cx, dx, ax
+;--------------------------------------------
+;Output:
+;nextX value - stack
+;=============================================
+currentX equ [bp + 6]
+currentY equ [bp + 4]
+nextX equ [bp - 6]
+
+proc FindNextAddedX_East
+
+	push bp
+	mov bp, sp
+
+	push ax
+	push dx
+	push cx
+
+	mov ax, currentX
+	mov nextX, ax
+	add nextX, NEXT_POS_ADDED_PIXELS_X
+
+	mov cx, currentY
+	mov dx, nextX
+	mov ah,0Dh
+	int 10h
+	
+	cmp al, 1
+	jne @@ExitProc
+
+	mov cx, currentY
+	mov dx, currentX
+	mov ah,0Dh
+
+@@FindClosestNextX:
+
+	int 10h
+
+	cmp al, 1
+	jne @@FindClosestNextX
+
+	inc dx
+
+@@ReturnClosestNextX:
+
+	dec dx
+
+	cmp dx, NEXT_POS_ADDED_PIXELS_X
+	ja @@NEXT_POS_ADDED_PIXELS_XSmaller
+
+@@CountSmaller:
+
+	add dx, currentX
+	mov nextX, dx
+
+	jmp @@ExitProc
+
+@@NEXT_POS_ADDED_PIXELS_XSmaller:
+
+	add nextX, NEXT_POS_ADDED_PIXELS_X
+
+
+@@ExitProc:
+
+	mov dx, nextX
+	mov currentX, dx
+
+	pop cx
+	pop dx
+	pop ax
+	pop bp
+
+	ret 2	 
+
+endp FindNextAddedX_East
+
+;=============================================
+;Find next Y value considering bounderies.
+;--------------------------------------------
+;Input: 
+;1- CurrentYPos
+;2- CurrentXPos
+;--------------------------------------------
+;Registers:
+;bp, cx, dx, ax
+;--------------------------------------------
+;Output:
+;nextX value - stack
+;=============================================
+currentY equ [bp + 6]
+currentX equ [bp + 4]
+nextY equ [bp - 6]
+
+proc FindNextAddedY_South
+
+	push bp
+	mov bp, sp
+
+
+	push ax
+	push dx
+	push cx
+
+	mov ax, currentY
+	mov nextY, ax
+	add nextY, NEXT_POS_ADDED_PIXELS_Y
+
+	mov cx, nextY
+	mov dx, currentX
+	mov ah,0Dh
+	int 10h
+	
+	cmp al, 1
+	jne @@ExitProc
+
+	mov cx, nextY
+	mov dx, currentX
+	mov ah,0Dh
+
+@@FindClosestNextY:
+
+	int 10h
+
+	cmp al, 1
+	jne @@FindClosestNextY
+
+	inc cx
+
+@@ReturnClosestNextY:
+
+	dec cx
+	cmp cx, NEXT_POS_ADDED_PIXELS_Y
+	ja @@NEXT_POS_ADDED_PIXELS_YSmaller
+
+@@CountSmaller:
+
+	add cx, currentY
+	mov nextY, cx
+
+	jmp @@ExitProc
+
+@@NEXT_POS_ADDED_PIXELS_YSmaller:
+
+	add nextY, NEXT_POS_ADDED_PIXELS_Y
+
+
+@@ExitProc:
+
+	mov cx, nextY
+	mov currentY, cx
+
+	pop cx
+	pop dx
+	pop ax
+	pop bp
+
+	ret 2	 
+
+endp FindNextAddedY_South
+;=============================================
+;Find next Y value considering bounderies.
+;--------------------------------------------
+;Input: 
+;1- CurrentYPos
+;2- CurrentXPos
+;--------------------------------------------
+;Registers:
+;bp, cx, dx, ax
+;--------------------------------------------
+;Output:
+;nextX value - stack
+;=============================================
+currentY equ [bp + 6]
+currentX equ [bp + 4]
+nextY equ [bp - 6]
+
+proc FindNextAddedY_North
+
+	push bp
+	mov bp, sp
+
+	push ax
+	push dx
+	push cx
+
+	mov ax, currentY
+	mov nextY, ax
+	;count pixles until the wall 
+	; nextY -= min(NEXT_POS_ADDED_PIXELS_Y, count)
+	sub nextY, NEXT_POS_ADDED_PIXELS_Y
+
+	mov cx, nextY
+	mov dx, currentX
+	mov ah,0Dh
+	int 10h
+	
+	cmp al, 1
+	jne @@ExitProc
+
+	mov cx, nextY
+	mov dx, currentX
+	mov ah,0Dh
+
+@@FindClosestNextY:
+
+	int 10h
+
+	cmp al, 1
+	jne @@FindClosestNextY
+
+	dec cx
+
+@@ReturnClosestNextY:
+
+	inc cx
+
+	cmp cx, NEXT_POS_ADDED_PIXELS_Y
+	ja @@NEXT_POS_ADDED_PIXELS_YSmaller
+
+@@CountSmaller:
+
+	add cx, currentY
+	mov nextY, cx
+
+	jmp @@ExitProc
+
+@@NEXT_POS_ADDED_PIXELS_YSmaller:
+
+	sub nextY, NEXT_POS_ADDED_PIXELS_Y
+
+@@ExitProc:
+
+	mov cx, nextY
+	mov currentY, cx
+	
+	pop cx
+	pop dx
+	pop ax
+	pop bp
+
+	ret 2	 
+
+endp FindNextAddedY_North
 ;=============================================
 ;Remove pacman and dots (9*9)
 ;--------------------------------------------
