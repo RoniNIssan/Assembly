@@ -36,6 +36,8 @@ MAZE_LEFT_BOUNDARY_X = 13
 NEXT_POS_ADDED_PIXELS_Y = 7
 NEXT_POS_ADDED_PIXELS_X = 7
 
+PACMAN_MIDDLE_X_PIXLE_WEST = 2
+PACMAN_MIDDLE_Y_PIXLE_WEST = 3
 
 ;Needed when turn:
 DISTANCE_FROM_BOUNDARY_X = 5; when moving on Y - distance between ghost and boundary	
@@ -67,7 +69,7 @@ DATASEG
 		matrix dw ?
 
         ;Current Position 
-        pacmanX dw 87
+        pacmanX dw 43
         pacmanY dw 142
         currentPoint dw ?
 		pacmanCurrentDirection dw 'A'
@@ -139,18 +141,12 @@ MainLoop:
 
 North:
 
-     call is_turnFront
-
-     cmp [Bool], 1
-     jne MainLoop
 
 	 push [pacmanX]
 	 push [pacmanY]
      call removePacman
 
 	 mov [pacmanCurrentDirection], 'W'
-
-	 ;sub [pacmanY], NEXT_POS_ADDED_PIXELS_Y
 
 	 push [pacmanX]
 	 push [pacmanY]
@@ -173,21 +169,14 @@ EastShortcut:
      jmp East
 South:
 
-     call is_turnBack
-
-     cmp [Bool], 1
-     jne MainLoop
-
 	 push [pacmanX]
 	 push [pacmanY]
      call removePacman
      
 	 mov [pacmanCurrentDirection], 'S'
 	 
-	 ;add [pacmanY], NEXT_POS_ADDED_PIXELS_Y
 	 push [pacmanX]
 	 push [pacmanY]
-	 
 	 call FindNextAddedY_South
 	 
 	 pop [pacmanY]
@@ -197,23 +186,19 @@ South:
 	 push [pacmanY]
 	 call PacmanFigureDisplay
 
-MainLoopShortcut:
+MainLoopShortcut:	
      jmp MainLoop
 
 East:
 
-     call is_turnRight
-     
 	 push [pacmanX]
 	 push [pacmanY]
      call removePacman
      
 	 mov [pacmanCurrentDirection], 'D'
 	 
-	 ;add [pacmanX], NEXT_POS_ADDED_PIXELS_X
 	 push [pacmanX]
 	 push [pacmanY]
-	 
 	 call FindNextAddedX_East
 	 
 	 pop [pacmanX]
@@ -227,21 +212,14 @@ East:
 
 West:
 
-     call is_turnLeft
-
-     cmp [Bool], 1
-     jne MainLoopShortcut
-
 	 push [pacmanX]
 	 push [pacmanY]
      call removePacman
      
 	 mov [pacmanCurrentDirection], 'A'
 
-	 ;sub [pacmanX], NEXT_POS_ADDED_PIXELS_X
 	 push [pacmanX]
 	 push [pacmanY]
-	 
 	 call FindNextAddedX_West
 	 
 	 pop [pacmanX]
@@ -259,7 +237,7 @@ EXIT:
      int 16h
 
 	 call finishGraphicMode
-	 mov ax, 4C00h ; returns control to dos
+	 mov ax, 4C00h
   	 int 21h
   
 
@@ -295,7 +273,8 @@ endp StratScreen
 ;=============================================
 currentX equ [bp + 6]
 currentY equ [bp + 4]
-nextX equ [bp - 6]
+nextX equ [bp - 8]
+normalizedY equ [bp - 10]
 
 proc FindNextAddedX_West
 
@@ -306,40 +285,48 @@ proc FindNextAddedX_West
 	push dx
 	push cx
 
+	sub sp, 4
+;Normalize currentY value to present to its middle pixel according to direction
+
+	mov ax,  currentY
+	mov normalizedY, ax
+	add normalizedY, PACMAN_MIDDLE_Y_PIXLE_WEST
+
 	mov ax, currentX
 	mov nextX, ax
 	sub nextX, NEXT_POS_ADDED_PIXELS_X
 
-	mov cx, currentY
+	mov cx, normalizedY
 	mov dx, nextX
 	mov ah,0Dh
 	int 10h
 	
-	cmp al, 1
+	cmp al, 0FCh
 	jne @@ExitProc
 
-	mov cx, currentY
-	mov dx, currentX
+	;mov cx, normalizedY
+	;mov dx, nextX
+	inc dx
 	mov ah,0Dh
 
 @@FindClosestNextX:
 
 	int 10h
 
-	cmp al, 1
-	jne @@FindClosestNextX
+	cmp al, 0FCh
+	jne @@ReturnClosestNextX
 
 	dec dx
 
 @@ReturnClosestNextX:
 
 	inc dx
-	cmp dx, NEXT_POS_ADDED_PIXELS_X
-	ja @@NEXT_POS_ADDED_PIXELS_XSmaller
+	cmp dx, nextX
+	ja @@CountSmaller
 
 @@CountSmaller:
 
-	add dx, currentX
+	;add dx, currentX
 	mov nextX, dx
 
 	jmp @@ExitProc
@@ -352,6 +339,8 @@ proc FindNextAddedX_West
 	 
 	mov dx, nextX
 	mov currentX, dx
+
+	add sp, 4
 
 	pop cx
 	pop dx
@@ -397,19 +386,20 @@ proc FindNextAddedX_East
 	mov ah,0Dh
 	int 10h
 	
-	cmp al, 1
+	cmp al, 0FCh
 	jne @@ExitProc
 
-	mov cx, currentY
-	mov dx, currentX
+	;mov cx, currentY
+	;mov dx, currentX
+	inc dx
 	mov ah,0Dh
 
 @@FindClosestNextX:
 
 	int 10h
 
-	cmp al, 1
-	jne @@FindClosestNextX
+	cmp al, 0FCh
+	jne @@ReturnClosestNextX
 
 	inc dx
 
@@ -482,7 +472,7 @@ proc FindNextAddedY_South
 	mov ah,0Dh
 	int 10h
 	
-	cmp al, 1
+	cmp al, 0FCh
 	jne @@ExitProc
 
 	mov cx, nextY
@@ -493,7 +483,7 @@ proc FindNextAddedY_South
 
 	int 10h
 
-	cmp al, 1
+	cmp al, 0FCh
 	jne @@FindClosestNextY
 
 	inc cx
@@ -566,7 +556,7 @@ proc FindNextAddedY_North
 	mov ah,0Dh
 	int 10h
 	
-	cmp al, 1
+	cmp al, 0FCh
 	jne @@ExitProc
 
 	mov cx, nextY
@@ -577,7 +567,7 @@ proc FindNextAddedY_North
 
 	int 10h
 
-	cmp al, 1
+	cmp al, 0FCh
 	jne @@FindClosestNextY
 
 	dec cx
