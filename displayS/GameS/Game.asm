@@ -10,8 +10,10 @@ FILENAME_PACMAN_EAST equ 'PE.bmp'
 FILENAME_PACMAN_WEST equ 'PW.bmp'
 
 ;Maze 
+;FILE_ROWS_MAZE = 200
+;FILE_COLS_MAZE = 191 
 FILE_ROWS_MAZE = 200
-FILE_COLS_MAZE = 191 
+FILE_COLS_MAZE = 176 
 
 ;Maze colors
 DOTS_COLOR = 14
@@ -20,8 +22,8 @@ BOUNDARIES_COLOR = 1
 BACKGROUND_COLOR = 0
 
 ;Pacman figure 
-FILE_ROWS_PACMAN = 7
-FILE_COLS_PACMAN = 7 
+FILE_ROWS_PACMAN = 9
+FILE_COLS_PACMAN = 9 
 
 ;Quit Banner values
 QUIT_RIGHT_COL = 34
@@ -33,11 +35,11 @@ QUIT_BOTTOM_ROW = 31
 MAZE_RIGHT_BOUNDARY_X = 167
 MAZE_LEFT_BOUNDARY_X = 13
 
-NEXT_POS_ADDED_PIXELS_Y = 7
+NEXT_POS_ADDED_PIXELS_Y = 6
 NEXT_POS_ADDED_PIXELS_X = 7
 
-PACMAN_MIDDLE_X_PIXLE_WEST = 2
-PACMAN_MIDDLE_Y_PIXLE_WEST = 3
+PACMAN_MIDDLE_X_PIXLE_WEST = (FILE_COLS_PACMAN - 1) / 2 + 1
+PACMAN_MIDDLE_Y_PIXLE_WEST = (FILE_ROWS_PACMAN - 1) / 2 + 1
 
 ;Needed when turn:
 DISTANCE_FROM_BOUNDARY_X = 5; when moving on Y - distance between ghost and boundary	
@@ -69,11 +71,14 @@ DATASEG
 		matrix dw ?
 
         ;Current Position 
-        pacmanX dw 86
-        pacmanY dw 142
+;		 pacmanX dw 84
+;        pacmanY dw 146
+ 		 pacmanX dw 126
+         pacmanY dw 164
+
         currentPoint dw ?
-		pacmanCurrentDirection dw 'A'
-		pacmanLastDirection dw 'A'
+		;pacmanCurrentDirection dw 'A'
+		pacmanCurrentDirection dw 'S'
 
 		;Boolean
 		Bool db 0 
@@ -112,6 +117,8 @@ start:
 	 push [pacmanY]
 	 call PacmanFigureDisplay
 
+
+	 
 MainLoop:
 
 	 mov ah, 0
@@ -295,16 +302,17 @@ proc FindNextAddedX_West
 	mov nextX, ax
 	sub nextX, NEXT_POS_ADDED_PIXELS_X
 
-	mov cx, normalizedY
-	mov dx, nextX
+	mov cx, nextX
+	mov dx, normalizedY
 	mov ah,0Dh
 	int 10h
 	
 	cmp al, 0FCh
 	jne @@ExitProc
 
-	mov dx, currentX 
+	mov cx, currentX 
 	mov ah,0Dh
+	;ax counter till boundray
 @@FindClosestNextX:
 
 	int 10h
@@ -312,28 +320,30 @@ proc FindNextAddedX_West
 	cmp al, 0FCh
 	jne @@ReturnClosestNextX
 
-	dec dx
+	dec cx
+
+	jmp @@FindClosestNextX
 
 @@ReturnClosestNextX:
 
-	;inc dx
-	cmp dx, nextX
+	;inc cx
+	cmp cx, nextX
 	ja @@CountSmaller
 
 @@CountSmaller:
 
-	mov nextX, dx
+	mov nextX, cx
 
 	jmp @@ExitProc
 
-@@NEXT_POS_ADDED_PIXELS_XSmaller:
+@@DefualtSmaller:
 
 	sub nextX, NEXT_POS_ADDED_PIXELS_X
 
 @@ExitProc:
 	 
-	mov dx, nextX
-	mov currentX, dx
+	mov cx, nextX
+	mov currentX, cx
 
 	add sp, 4
 
@@ -363,6 +373,7 @@ currentX equ [bp + 6]
 currentY equ [bp + 4]
 nextX equ [bp - 8]
 normalizedY equ [bp - 10]
+normalizedX equ [bp - 12]
 
 proc FindNextAddedX_East
 
@@ -373,7 +384,7 @@ proc FindNextAddedX_East
 	push dx
 	push cx
 
-	sub sp, 4
+	sub sp, 6
 
 	;Normalize currentY value to present to its middle pixel according to direction
 	mov ax,  currentY
@@ -381,19 +392,24 @@ proc FindNextAddedX_East
 	add normalizedY, PACMAN_MIDDLE_Y_PIXLE_WEST
 
 	;Containing next defualt value
+	;CurrentX is top left pacman point -> dosen't present the east muserments properly
 	mov ax, currentX
+	mov normalizedX, ax
+	add normalizedX, NEXT_POS_ADDED_PIXELS_X
+
+	mov ax, normalizedX
 	mov nextX, ax
 	add nextX, NEXT_POS_ADDED_PIXELS_X
 
-	mov cx, normalizedY
-	mov dx, nextX
+	mov cx, nextX
+	mov dx, normalizedY
 	mov ah,0Dh
 	int 10h
 	
 	cmp al, 0FCh
 	jne @@ExitProc
 
-	mov dx, currentX 
+	mov cx, normalizedX 
 	mov ah,0Dh
 
 @@FindClosestNextX:
@@ -403,30 +419,34 @@ proc FindNextAddedX_East
 	cmp al, 0FCh
 	jne @@ReturnClosestNextX
 
-	inc dx
+	inc cx
+
+	jmp @@FindClosestNextX
 
 @@ReturnClosestNextX:
 
-	;dec dx
-	cmp dx, nextX
+	;dec cx
+	cmp cx, nextX
 	jb @@CountSmaller
 
 @@CountSmaller:
 
-	mov nextX, dx
+	;sub cx, NEXT_POS_ADDED_PIXELS_X
+	mov nextX, cx
 
 	jmp @@ExitProc
 
-@@NEXT_POS_ADDED_PIXELS_XSmaller:
+@@DefualtSmaller:
 
 	add nextX, NEXT_POS_ADDED_PIXELS_X
 
 @@ExitProc:
 
-	mov dx, nextX
-	mov currentX, dx
+	sub nextX, NEXT_POS_ADDED_PIXELS_X
+	mov cx, nextX
+	mov currentX, cx
 
-	add sp, 4
+	add sp, 6
 
 	pop cx
 	pop dx
@@ -454,6 +474,7 @@ currentY equ [bp + 6]
 currentX equ [bp + 4]
 nextY equ [bp - 8]
 normalizedX equ [bp - 10]
+normalizedY equ [bp - 12]
 
 proc FindNextAddedY_South
 
@@ -464,25 +485,29 @@ proc FindNextAddedY_South
 	push dx
 	push cx
 
-	sub sp, 4
+	sub sp, 6
 
 	mov ax,  currentX
 	mov normalizedX, ax
 	add normalizedX, PACMAN_MIDDLE_X_PIXLE_WEST
 
 	mov ax, currentY
+	mov normalizedY, ax
+	add normalizedY, NEXT_POS_ADDED_PIXELS_Y
+
+	mov ax, normalizedY
 	mov nextY, ax
 	add nextY, NEXT_POS_ADDED_PIXELS_Y
 
-	mov cx, nextY
-	mov dx, normalizedX
+	mov cx, normalizedX
+	mov dx, nextY
 	mov ah,0Dh
 	int 10h
 	
 	cmp al, 0FCh
 	jne @@ExitProc
 
-	mov cx, currentY
+	mov dx, currentY
 	mov ah,0Dh
 
 @@FindClosestNextY:
@@ -492,30 +517,33 @@ proc FindNextAddedY_South
 	cmp al, 0FCh
 	jne @@ReturnClosestNextY
 
-	inc cx
+	inc dx
+
+	jmp @@FindClosestNextY
 
 @@ReturnClosestNextY:
 
-	;dec cx
-	cmp cx, nextY
+	;dec dx
+	cmp dx, nextY
 	jb @@CountSmaller
 
 @@CountSmaller:
 
-	mov nextY, cx
+	mov nextY, dx
 
 	jmp @@ExitProc
 
-@@NEXT_POS_ADDED_PIXELS_YSmaller:
+@@DefualtSmaller:
 
 	add nextY, NEXT_POS_ADDED_PIXELS_Y
 
 @@ExitProc:
 
-	mov cx, nextY
-	mov currentY, cx
+	sub nextY, NEXT_POS_ADDED_PIXELS_Y
+	mov dx, nextY
+	mov currentY, dx
 
-	add sp, 4
+	add sp, 6
 
 	pop cx
 	pop dx
@@ -561,15 +589,15 @@ proc FindNextAddedY_North
 	mov nextY, ax
 	sub nextY, NEXT_POS_ADDED_PIXELS_Y
 
-	mov cx, nextY
-	mov dx, normalizedX
+	mov cx, normalizedX
+	mov dx, nextY
 	mov ah,0Dh
 	int 10h
 	
 	cmp al, 0FCh
 	jne @@ExitProc
 
-	mov cx, currentY
+	mov dx, currentY
 	mov ah,0Dh
 
 @@FindClosestNextY:
@@ -579,28 +607,30 @@ proc FindNextAddedY_North
 	cmp al, 0FCh
 	jne @@ReturnClosestNextY
 
-	dec cx
+	dec dx
+
+	jmp @@FindClosestNextY
 
 @@ReturnClosestNextY:
 
-	;inc cx
-	cmp cx, nextY
+	;inc dx
+	cmp dx, nextY
 	ja @@CountSmaller
 
 @@CountSmaller:
 
-	mov nextY, cx
+	mov nextY, dx
 
 	jmp @@ExitProc
 
-@@NEXT_POS_ADDED_PIXELS_YSmaller:
+@@DefualtSmaller:
 
 	sub nextY, NEXT_POS_ADDED_PIXELS_Y
 
 @@ExitProc:
 
-	mov cx, nextY
-	mov currentY, cx
+	mov dx, nextY
+	mov currentY, dx
 
 	add sp, 4
 
