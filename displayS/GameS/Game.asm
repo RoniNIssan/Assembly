@@ -35,14 +35,14 @@ QUIT_BOTTOM_ROW = 31
 MAZE_RIGHT_BOUNDARY_X = 167
 MAZE_LEFT_BOUNDARY_X = 13
 
-NEXT_POS_ADDED_PIXELS_Y = 6
-NEXT_POS_ADDED_PIXELS_X = 7
+NEXT_POS_ADDED_PIXELS_Y = 9
+NEXT_POS_ADDED_PIXELS_X = 9
 
 PACMAN_MIDDLE_X_PIXLE_WEST = (FILE_COLS_PACMAN - 1) / 2 + 1
 PACMAN_MIDDLE_Y_PIXLE_WEST = (FILE_ROWS_PACMAN - 1) / 2 + 1
 
 ;Needed when turn:
-DISTANCE_FROM_BOUNDARY_X = 5; when moving on Y - distance between ghost and boundary	
+DISTANCE_FROM_BOUNDARY_X = 2; when moving on Y - distance between ghost and boundary	
 DISTANCE_FROM_BOUNDARY_Y = 2; when moving on X - distance between ghost and boundary
 
 
@@ -263,7 +263,6 @@ proc StratScreen
      ret
 
 endp StratScreen
-
 ;=============================================
 ;Find next X value considering bounderies.
 ;--------------------------------------------
@@ -302,49 +301,46 @@ proc FindNextAddedX_West
 	mov nextX, ax
 	sub nextX, NEXT_POS_ADDED_PIXELS_X
 
-	mov cx, nextX
+	mov cx, currentX
 	mov dx, normalizedY
 	mov ah,0Dh
+
+@@IsTouchingBoundray:
+
 	int 10h
 	
 	cmp al, 0FCh
+	je @@FindMinSteps
+
+    dec cx
+    jmp @@IsTouchingBoundray
+
+
+@@FindMinSteps:
+
+    inc cx
+    cmp cx, nextX
+    jb @@CheckAddedSteps
+
+@@CountedSteps:
+
+	mov nextX, cx ;cx value is next X value
+
+@@CheckAddedSteps:
+
+	mov cx, currentX
+	sub cx, nextX
+
+	cmp cx, DISTANCE_FROM_BOUNDARY_X
 	jne @@ExitProc
 
-	mov cx, currentX 
-	mov ah,0Dh
-	;ax counter till boundray
-@@FindClosestNextX:
-
-	int 10h
-
-	cmp al, 0FCh
-	jne @@ReturnClosestNextX
-
-	dec cx
-
-	jmp @@FindClosestNextX
-
-@@ReturnClosestNextX:
-
-	;inc cx
-	cmp cx, nextX
-	ja @@CountSmaller
-
-@@CountSmaller:
-
-	mov nextX, cx
-
-	jmp @@ExitProc
-
-@@DefualtSmaller:
-
-	sub nextX, NEXT_POS_ADDED_PIXELS_X
+	add nextX, DISTANCE_FROM_BOUNDARY_X
 
 @@ExitProc:
-	 
+
 	mov cx, nextX
 	mov currentX, cx
-
+	 
 	add sp, 4
 
 	pop cx
@@ -356,6 +352,7 @@ proc FindNextAddedX_West
 	ret 2	 
 
 endp FindNextAddedX_West
+
 ;=============================================
 ;Find next X value considering bounderies.
 ;--------------------------------------------
@@ -395,54 +392,47 @@ proc FindNextAddedX_East
 	;CurrentX is top left pacman point -> dosen't present the east muserments properly
 	mov ax, currentX
 	mov normalizedX, ax
-	add normalizedX, NEXT_POS_ADDED_PIXELS_X
+	add normalizedX, FILE_COLS_PACMAN
 
 	mov ax, normalizedX
 	mov nextX, ax
 	add nextX, NEXT_POS_ADDED_PIXELS_X
 
-	mov cx, nextX
+	mov cx, normalizedX
 	mov dx, normalizedY
 	mov ah,0Dh
+
+@@IsTouchingBoundray:
+
 	int 10h
 	
 	cmp al, 0FCh
-	jne @@ExitProc
+	je @@FindMinSteps
 
-	mov cx, normalizedX 
-	mov ah,0Dh
+    inc cx
+    jmp @@IsTouchingBoundray
 
-@@FindClosestNextX:
 
-	int 10h
+@@FindMinSteps:
 
-	cmp al, 0FCh
-	jne @@ReturnClosestNextX
+    dec cx
+    cmp cx, nextX
+    ja @@Defualt
 
-	inc cx
-
-	jmp @@FindClosestNextX
-
-@@ReturnClosestNextX:
-
-	;dec cx
-	cmp cx, nextX
-	jb @@CountSmaller
-
-@@CountSmaller:
-
-	;sub cx, NEXT_POS_ADDED_PIXELS_X
-	mov nextX, cx
-
+@@CountedSteps:
+     
+	sub cx, FILE_COLS_PACMAN
+	mov currentX, cx ;cx value is next X value
 	jmp @@ExitProc
 
-@@DefualtSmaller:
+@@Defualt:
 
-	add nextX, NEXT_POS_ADDED_PIXELS_X
+	sub nextX, FILE_COLS_PACMAN
+	mov cx, nextX
+	mov currentX, cx
 
 @@ExitProc:
 
-	sub nextX, NEXT_POS_ADDED_PIXELS_X
 	mov cx, nextX
 	mov currentX, cx
 
