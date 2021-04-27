@@ -1,6 +1,6 @@
 	IDEAL
-MODEL small 
-STACK 100h	
+MODEL small
+STACK 100h
 
 
 FILENAME_MAZE_DISPLAY equ 'Maze.bmp'
@@ -9,11 +9,11 @@ FILENAME_PACMAN_SOUTH equ 'PS.bmp'
 FILENAME_PACMAN_EAST equ 'PE.bmp'
 FILENAME_PACMAN_WEST equ 'PW.bmp'
 
-;Maze 
+;Maze
 ;FILE_ROWS_MAZE = 200
-;FILE_COLS_MAZE = 191 
+;FILE_COLS_MAZE = 191
 FILE_ROWS_MAZE = 200
-FILE_COLS_MAZE = 176 
+FILE_COLS_MAZE = 176
 
 ;Maze colors
 DOTS_COLOR = 14
@@ -21,9 +21,9 @@ BLOCK_COLOR = 15
 BOUNDARIES_COLOR = 1
 BACKGROUND_COLOR = 0
 
-;Pacman figure 
+;Pacman figure
 FILE_ROWS_PACMAN = 9
-FILE_COLS_PACMAN = 9 
+FILE_COLS_PACMAN = 9
 
 ;Quit Banner values
 QUIT_RIGHT_COL = 34
@@ -42,7 +42,7 @@ PACMAN_MIDDLE_X_PIXLE_WEST = (FILE_COLS_PACMAN - 1) / 2 + 1
 PACMAN_MIDDLE_Y_PIXLE_WEST = (FILE_ROWS_PACMAN - 1) / 2 + 1
 
 ;Needed when turn:
-DISTANCE_FROM_BOUNDARY_X = 2; when moving on Y - distance between ghost and boundary	
+DISTANCE_FROM_BOUNDARY_X = 2; when moving on Y - distance between ghost and boundary
 DISTANCE_FROM_BOUNDARY_Y = 2; when moving on X - distance between ghost and boundary
 
 
@@ -58,21 +58,22 @@ DATASEG
 
 		FileHandle	dw ?
 		Header 	    db 54 dup(0)
-		Palette 	db 400h dup (0)	
-		
+		Palette 	db 400h dup (0)
+
 		BmpFileErrorMsg    	db 'Error At Opening Bmp File ',FILE_COLS_PACMAN, 0dh, 0ah,'$'
 		ErrorFile           db 0
-	
+
 		BmpLeft dw ?
 		BmpTop dw ?
 		BmpColSize dw ?
 		BmpRowSize dw ?
-	
+
 		matrix dw ?
 
-        ;Current Position 
-		pacmanX dw 84
-        pacmanY dw 146
+        ;Current Position
+		;pacmanX dw 84
+		pacmanX dw 120
+    pacmanY dw 146
 
 
         currentPoint dw ?
@@ -80,10 +81,10 @@ DATASEG
 		pacmanCurrentDirection dw 'D'
 
 		;Boolean
-		Bool db 0 
-		
+		Bool db 0
+
 		isDirectionChanged dw 0
-		
+
 
 pacmanBlank db	0,0,0,0,0,0,0
             db	0,0,0,0,0,0,0
@@ -97,7 +98,7 @@ pacmanBlank db	0,0,0,0,0,0,0
 CODESEG
 
     ORG 100h
-	
+
 start:
 	 mov ax, @data
 	 mov ds,ax
@@ -110,14 +111,14 @@ start:
      call StratScreen
 
      call setPacmanCurrentPoint
-	 
+
 	 push [pacmanCurrentDirection]
 	 push [pacmanX]
 	 push [pacmanY]
 	 call PacmanFigureDisplay
 
 
-	 
+
 MainLoop:
 
 	 mov ah, 0
@@ -143,7 +144,7 @@ MainLoop:
      cmp al, 'a'
      je WestShortcut
 
-     jne MainLoop 
+     jne MainLoop
 
 North:
 
@@ -157,7 +158,7 @@ North:
 	 push [pacmanY]
 	 push [pacmanX]
 	 call FindNextAddedY_North
-	 
+
 	 pop [pacmanY]
 
 	 push [pacmanCurrentDirection]
@@ -177,13 +178,13 @@ South:
 	 push [pacmanX]
 	 push [pacmanY]
      call removePacman
-     
+
 	 mov [pacmanCurrentDirection], 'S'
-	 
+
 	 push [pacmanY]
 	 push [pacmanX]
 	 call FindNextAddedY_South
-	 
+
 	 pop [pacmanY]
 
 	 push [pacmanCurrentDirection]
@@ -191,7 +192,7 @@ South:
 	 push [pacmanY]
 	 call PacmanFigureDisplay
 
-MainLoopShortcut:	
+MainLoopShortcut:
      jmp MainLoop
 
 East:
@@ -199,13 +200,13 @@ East:
 	 push [pacmanX]
 	 push [pacmanY]
      call removePacman
-     
+
 	 mov [pacmanCurrentDirection], 'D'
-	 
+
 	 push [pacmanX]
 	 push [pacmanY]
 	 call FindNextAddedX_East
-	 
+
 	 pop [pacmanX]
 
 	 push [pacmanCurrentDirection]
@@ -220,13 +221,13 @@ West:
 	 push [pacmanX]
 	 push [pacmanY]
      call removePacman
-     
+
 	 mov [pacmanCurrentDirection], 'A'
 
 	 push [pacmanX]
 	 push [pacmanY]
 	 call FindNextAddedX_West
-	 
+
 	 pop [pacmanX]
 
 	 push [pacmanCurrentDirection]
@@ -235,7 +236,7 @@ West:
 	 call PacmanFigureDisplay
 
      jmp MainLoopShortcut
-          
+
 EXIT:
 
      mov ah, 0
@@ -244,7 +245,7 @@ EXIT:
 	 call finishGraphicMode
 	 mov ax, 4C00h
   	 int 21h
-  
+
 
 
 ;======================
@@ -265,7 +266,7 @@ endp StratScreen
 ;=============================================
 ;Find next X value considering bounderies.
 ;--------------------------------------------
-;Input: 
+;Input:
 ;1- CurrentXPos
 ;2- CurrentYPos
 ;--------------------------------------------
@@ -307,7 +308,7 @@ proc FindNextAddedX_West
 @@IsTouchingBoundray:
 
 	int 10h
-	
+
 	cmp al, 0FCh
 	je @@FindMinSteps
 
@@ -319,7 +320,7 @@ proc FindNextAddedX_West
 
     inc cx
     cmp cx, nextX
-    jb @@CheckAddedSteps
+    ja @@CheckAddedSteps
 
 @@CountedSteps:
 
@@ -339,7 +340,7 @@ proc FindNextAddedX_West
 
 	mov cx, nextX
 	mov currentX, cx
-	 
+
 	add sp, 4
 
 	pop cx
@@ -348,14 +349,14 @@ proc FindNextAddedX_West
 
 	pop bp
 
-	ret 2	 
+	ret 2
 
 endp FindNextAddedX_West
 
 ;=============================================
 ;Find next X value considering bounderies.
 ;--------------------------------------------
-;Input: 
+;Input:
 ;1- CurrentXPos
 ;2- CurrentYPos
 ;--------------------------------------------
@@ -404,7 +405,7 @@ proc FindNextAddedX_East
 @@IsTouchingBoundray:
 
 	int 10h
-	
+
 	cmp al, 0FCh
 	je @@FindMinSteps
 
@@ -419,7 +420,7 @@ proc FindNextAddedX_East
     ja @@Defualt
 
 @@CountedSteps:
-     
+
 	sub cx, FILE_COLS_PACMAN
 	mov currentX, cx ;cx value is next X value
 	jmp @@ExitProc
@@ -432,9 +433,6 @@ proc FindNextAddedX_East
 
 @@ExitProc:
 
-	mov cx, nextX
-	mov currentX, cx
-
 	add sp, 6
 
 	pop cx
@@ -442,14 +440,14 @@ proc FindNextAddedX_East
 	pop ax
 	pop bp
 
-	ret 2	 
+	ret 2
 
 endp FindNextAddedX_East
 
 ;=============================================
 ;Find next Y value considering bounderies.
 ;--------------------------------------------
-;Input: 
+;Input:
 ;1- CurrentYPos
 ;2- CurrentXPos
 ;--------------------------------------------
@@ -492,7 +490,7 @@ proc FindNextAddedY_South
 	mov dx, nextY
 	mov ah,0Dh
 	int 10h
-	
+
 	cmp al, 0FCh
 	jne @@ExitProc
 
@@ -539,13 +537,13 @@ proc FindNextAddedY_South
 	pop ax
 	pop bp
 
-	ret 2	 
+	ret 2
 
 endp FindNextAddedY_South
 ;=============================================
 ;Find next Y value considering bounderies.
 ;--------------------------------------------
-;Input: 
+;Input:
 ;1- CurrentYPos
 ;2- CurrentXPos
 ;--------------------------------------------
@@ -582,7 +580,7 @@ proc FindNextAddedY_North
 	mov dx, nextY
 	mov ah,0Dh
 	int 10h
-	
+
 	cmp al, 0FCh
 	jne @@ExitProc
 
@@ -628,13 +626,13 @@ proc FindNextAddedY_North
 	pop ax
 	pop bp
 
-	ret 2	 	 
+	ret 2
 
 endp FindNextAddedY_North
 ;=============================================
 ;Remove pacman and dots (9*9)
 ;--------------------------------------------
-;Input: 
+;Input:
 ;1- CurrentXPos
 ;2- CurrentYPos
 ;--------------------------------------------
@@ -655,7 +653,7 @@ proc removePacman
      push cx
 	 lea cx, [pacmanBlank]
 	 mov [matrix] , cx
-     
+
      push dx
 	 mov dx, FILE_COLS_PACMAN
 	 mov cx, FILE_ROWS_PACMAN
@@ -663,8 +661,8 @@ proc removePacman
      push di
      push ax
 
-     mov di, currentY 
-     mov ax, currentY 
+     mov di, currentY
+     mov ax, currentY
      ;currentY * 320
      shl di, 8
      shl ax, 6
@@ -681,13 +679,13 @@ proc removePacman
      pop bp
 
      ret 4
- 
+
 endp removePacman
 
 ;=============================================
 ;Shows pacman on screen
 ;--------------------------------------------
-;Input: 
+;Input:
 ;1- Direction (by big letter [North -> N])
 ;2- CurrentXPos
 ;3- CurrentYPos
@@ -768,12 +766,12 @@ proc setPacmanCurrentPoint
      push di
      push ax
 
-     mov di, [pacmanY] 
+     mov di, [pacmanY]
 
      ;currentY * right boundary ("smaller screen")
 	 mov ax, MAZE_RIGHT_BOUNDARY_X
 	 mul di
-	 mov di, ax 
+	 mov di, ax
 
      add di, [pacmanX]
      mov [currentPoint], di
@@ -788,7 +786,7 @@ endp setPacmanCurrentPoint
 
 ;====================================
 ;Proc is_turnRight
-;Input: 
+;Input:
 ;-current point (gets from super where calculated)
 ;Output
 ;-able or unable to turn [Boolean varible]
@@ -818,13 +816,13 @@ proc is_turnRight
     int 10h
 
  	cmp al, 1
-	je @@ExitProc 
+	je @@ExitProc
 
 @@True:
 
 	mov [Bool], 1
 
-	
+
 @@ExitProc:
 
     pop dx
@@ -837,7 +835,7 @@ endp is_turnRight
 
 ;====================================
 ;Proc is_turnLeft
-;Input: 
+;Input:
 ;-current point (gets from super where calculated)
 ;Output
 ;-able or unable to turn [Boolean varible]
@@ -869,13 +867,13 @@ proc is_turnLeft
     int 10h
 
  	cmp al, 1
-	je @@ExitProc 
+	je @@ExitProc
 
 @@True:
 
 	mov [Bool], 1
 
-	
+
 @@ExitProc:
 
     pop dx
@@ -888,12 +886,12 @@ endp is_turnLeft
 
 ;====================================
 ;Proc is_turnBack
-;Input: 
+;Input:
 ;-current point (gets from super where calculated)
 ;Output
 ;-able or unable to turn [Boolean varible]
 ;====================================
-   ; currentPos equ [bp + 4] 
+   ; currentPos equ [bp + 4]
 
 proc is_turnBack
     push ax
@@ -920,13 +918,13 @@ proc is_turnBack
     int 10h
 
  	cmp al, 1
-	je @@ExitProc 
+	je @@ExitProc
 
 @@True:
 
 	mov [Bool], 1
 
-	
+
 @@ExitProc:
 
     pop dx
@@ -939,7 +937,7 @@ endp is_turnBack
 
 ;====================================
 ;Proc is_turnFront
-;Input: 
+;Input:
 ;-current point (gets from super where calculated)
 ;Output
 ;-able or unable to turn [Boolean varible]
@@ -971,13 +969,13 @@ proc is_turnFront
     int 10h
 
  	cmp al, 1
-	je @@ExitProc 
+	je @@ExitProc
 
 @@True:
 
 	mov [Bool], 1
 
-	
+
 @@ExitProc:
 
     pop dx
@@ -993,42 +991,42 @@ endp is_turnFront
 ;Put bmp file on screen
 ;======================
  proc OpenShowBmp near
-	
-	 
+
+
 	call OpenBmpFile
 	cmp [ErrorFile],1
 	je @@ExitProc
-	
+
 	call ReadBmpHeader
-	
+
 	call ReadBmpPalette
-	
+
 	call CopyBmpPalette
-	
+
 	call  ShowBMP
-	
-	 
+
+
 	call CloseBmpFile
 
 @@ExitProc:
 	ret
-endp OpenShowBmp 
+endp OpenShowBmp
 
 
 
 
 ; input dx filename to open
-proc OpenBmpFile	near						 
+proc OpenBmpFile	near
 	mov ah, 3Dh
 	xor al, al
 	int 21h
 	jc @@ErrorAtOpen
 	mov [FileHandle], ax
 	jmp @@ExitProc
-	
+
 @@ErrorAtOpen:
 	mov [ErrorFile],1
-@@ExitProc:	
+@@ExitProc:
 	ret
 endp OpenBmpFile
 
@@ -1042,16 +1040,16 @@ endp CloseBmpFile
 
 
 ; Read 54 bytes the Header
-proc ReadBmpHeader	near					
+proc ReadBmpHeader	near
 	push cx
 	push dx
-	
+
 	mov ah,3fh
 	mov bx, [FileHandle]
 	mov cx,54
 	mov dx,offset Header
 	int 21h
-	
+
 	pop dx
 	pop cx
 	ret
@@ -1059,18 +1057,18 @@ endp ReadBmpHeader
 
 
 proc ReadBmpPalette near ; Read BMP file color palette, 256 colors * 4 bytes (400h)
-						 ; 4 bytes for each color BGR + null)			
+						 ; 4 bytes for each color BGR + null)
 	push cx
 	push dx
-	
+
 	mov ah,3fh
 	mov cx,400h
 	mov dx,offset Palette
 	int 21h
-	
+
 	pop dx
 	pop cx
-	
+
 	ret
 endp ReadBmpPalette
 ;===============================================
@@ -1078,52 +1076,52 @@ endp ReadBmpPalette
 ; video ports are 3C8h for number of first color
 ; and 3C9h for all rest
 ;==============================================
-proc CopyBmpPalette		near					
-										
+proc CopyBmpPalette		near
+
 	push cx
 	push dx
-	
+
 	mov si,offset Palette
 	mov cx,256
 	mov dx,3C8h
-	mov al,0  ; black first							
+	mov al,0  ; black first
 	out dx,al ;3C8h
 	inc dx	  ;3C9h
 CopyNextColor:
-	mov al,[si+2] 		; Red				
-	shr al,2 			; divide by 4 Max (cos max is 63 and we have here max 255 ) (loosing color resolution).				
-	out dx,al 						
-	mov al,[si+1] 		; Green.				
-	shr al,2            
-	out dx,al 							
-	mov al,[si] 		; Blue.				
-	shr al,2            
-	out dx,al 							
-	add si,4 			; Point to next color.  (4 bytes for each color BGR + null)				
-								
+	mov al,[si+2] 		; Red
+	shr al,2 			; divide by 4 Max (cos max is 63 and we have here max 255 ) (loosing color resolution).
+	out dx,al
+	mov al,[si+1] 		; Green.
+	shr al,2
+	out dx,al
+	mov al,[si] 		; Blue.
+	shr al,2
+	out dx,al
+	add si,4 			; Point to next color.  (4 bytes for each color BGR + null)
+
 	loop CopyNextColor
-	
+
 	pop dx
 	pop cx
-	
+
 	ret
 endp CopyBmpPalette
 
 ;================================================
 ; BMP graphics are saved upside-down.
 ; Read the graphic line by line (BmpRowSize lines in VGA format),
-; PacmanDispalying the lines from bottom to top. 
+; PacmanDispalying the lines from bottom to top.
 ;================================================
-proc ShowBMP 
+proc ShowBMP
 
 	push cx
-	
+
 	mov ax, 0A000h
 	mov es, ax
-	
+
 	mov cx,[BmpRowSize]
-	
- 
+
+
 	mov ax,[BmpColSize] ; row size must dived by 4 so if it less we must calculate the extra padding bytes
 	xor dx,dx
 	mov si,4
@@ -1134,17 +1132,17 @@ proc ShowBMP
 	mov bp,4
 	sub bp,dx
 
-@@row_ok:	
+@@row_ok:
 	mov dx,[BmpLeft]
-	
+
 @@NextLine:
 	push cx
 	push dx
-	
+
 	mov di,cx  ; Current Row at the small bmp (each time -1)
 	add di,[BmpTop] ; add the Y on entire screen
-	
- 
+
+
 	; next 5 lines  di will be  = cx*320 + dx , point to the correct screen line
 	dec di
 	mov cx,di
@@ -1152,69 +1150,69 @@ proc ShowBMP
 	shl di,8
 	add di,cx
 	add di,dx
-	 
+
 	; small Read one line
 	mov ah,3fh
-	mov cx,[BmpColSize]  
+	mov cx,[BmpColSize]
 	add cx,bp  ; extra  bytes to each row must be divided by 4
 	mov dx,offset ScrLine
 	int 21h
 	; Copy one line into video memory
 	cld ; Clear direction flag, for movsb
-	mov cx,[BmpColSize]  
+	mov cx,[BmpColSize]
 	mov si,offset ScrLine
 	rep movsb ; Copy line to the screen
-	
+
 	pop dx
 	pop cx
-	 
+
 	loop @@NextLine
-	
+
 	pop cx
 	ret
-endp ShowBMP 
+endp ShowBMP
 
-	
+
 ;================================================
 ; Description: Graphic Mode
 ; INPUT: None
-; OUTPUT: Screen 
-; Register Usage: AX  
+; OUTPUT: Screen
+; Register Usage: AX
 ;================================================
-	 
+
 proc stratGraphicMode
 
 	 mov ax, 13h
 	 int 10h
 
 	 ret
-	
-endp stratGraphicMode	
+
+endp stratGraphicMode
 
 ;================================================
 ; Description: End Graphic Mode
 ; INPUT: None
-; OUTPUT: Screen 
-; Register Usage: AX  
+; OUTPUT: Screen
+; Register Usage: AX
 ;================================================
-	 
+
 proc finishGraphicMode
 
 	 mov al, 3
 	 mov ah, 0
 	 int 10h
-	 
+
 	 ret
-	
+
 endp finishGraphicMode
 
 ;================================================
 ; Description: Waits
 ; INPUT: None
-; OUTPUT: Screen 
-; Register Usage: CX, DX, AX  
+; OUTPUT: Screen
+; Register Usage: CX, DX, AX
 ;================================================
-	 
+
 proc ToWait
 
 	 mov cx, 0Fh
@@ -1222,32 +1220,32 @@ proc ToWait
 	 mov ah, 86h
 	 int 15h
 	 ret
-	
-endp ToWait	
+
+endp ToWait
 
 ;================================================
 ; Description: Draw a Horizontal line
 ; INPUT: DX [Y], CX [X], SI [WIDTH]
-; OUTPUT: Screen 
+; OUTPUT: Screen
 ; Register Usage: AX, CX, DX, SI
 ;================================================
-	
+
 proc DrawHorizontalLine	near
 	push si
 	push cx
 DrawLine:
 	cmp si,0
-	jz ExitDrawLine	
-	 
-    mov ah,0ch	
+	jz ExitDrawLine
+
+    mov ah,0ch
 	int 10h    ; put pixel
-		
-	
+
+
 	inc cx
 	dec si
 	jmp DrawLine
-	
-	
+
+
 ExitDrawLine:
 	pop cx
     pop si
@@ -1258,79 +1256,79 @@ endp DrawHorizontalLine
 ;================================================
 ; Description: Draw a Vertical line
 ; INPUT: DX [Y], CX [X], SI [LENGHT]
-; OUTPUT: Screen 
+; OUTPUT: Screen
 ; Register Usage: AX, CX, DX, SI
 ;================================================
-	
+
 proc DrawVerticalLine	near
 	push si
 	push dx
- 
+
 DrawVertical:
 	cmp si,0
-	jz ExitDrawLine	
-	 
-    mov ah,0ch	
+	jz ExitDrawLine
+
+    mov ah,0ch
 	int 10h    ; put pixel
-	
-	 
-	
+
+
+
 	inc dx
 	dec si
 	jmp DrawVertical
-	
-	
+
+
 @@ExitDrawLine:
 	pop dx
     pop si
 	ret
-endp DrawVerticalLine	
+endp DrawVerticalLine
 
-; in dx how many cols 
+; in dx how many cols
 ; in cx how many rows
 ; in matrix - the bytes
 ; in di start byte in screen (0 64000 -1)
 ;================================================
 ; Description: Put Matrix on Screen
 ; INPUT: DX [COL], CX [ROWS], Matrix offset, DI[Adress]
-; OUTPUT: Screen 
+; OUTPUT: Screen
 ; Register Usage: AX, CX, DX, SI
 ;================================================
-	
+
 
 proc putMatrixInScreen
 	push es
 	push ax
 	push si
-	
+
 	mov ax, 0A000h
 	mov es, ax
 	cld
-	
+
 	push dx
 	mov ax,cx
 	mul dx
 	mov bp,ax
 	pop dx
-	
-	
+
+
 	mov si,[matrix]
-	
-NextRow:	
+
+NextRow:
 	push cx
-	
+
 	mov cx, dx
 	rep movsb ; Copy line to the screen
 	sub di,dx
 	add di, 320
-	
-	
+
+
 	pop cx
 	loop NextRow
-	
-	
-endProc:	
-	
+
+
+endProc:
+
 	pop si
 	pop ax
 	pop es
@@ -1338,4 +1336,4 @@ endProc:
 endp putMatrixInScreen
 
 
-END start	
+END start
