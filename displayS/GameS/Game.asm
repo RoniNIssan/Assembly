@@ -71,14 +71,13 @@ DATASEG
 		matrix dw ?
 
         ;Current Position 
-;		 pacmanX dw 84
-;        pacmanY dw 146
- 		 pacmanX dw 126
-         pacmanY dw 164
+		pacmanX dw 84
+        pacmanY dw 146
+
 
         currentPoint dw ?
 		;pacmanCurrentDirection dw 'A'
-		pacmanCurrentDirection dw 'S'
+		pacmanCurrentDirection dw 'D'
 
 		;Boolean
 		Bool db 0 
