@@ -42,7 +42,7 @@ PACMAN_MIDDLE_X_PIXLE_WEST = (FILE_COLS_PACMAN - 1) / 2 + 1
 PACMAN_MIDDLE_Y_PIXLE_WEST = (FILE_ROWS_PACMAN - 1) / 2 + 1
 
 ;Needed when turn:
-DISTANCE_FROM_BOUNDARY_X = 2; when moving on Y - distance between ghost and boundary
+DISTANCE_FROM_BOUNDARY_X = 2; when moving on Y - distanc1e between ghost and boundary
 DISTANCE_FROM_BOUNDARY_Y = 2; when moving on X - distance between ghost and boundary
 
 
@@ -108,9 +108,9 @@ start:
 ;		Openning Scrren
 
 	 call stratGraphicMode
-     call StratScreen
+   call StratScreen
 
-     call setPacmanCurrentPoint
+   call setPacmanCurrentPoint
 
 	 push [pacmanCurrentDirection]
 	 push [pacmanX]
@@ -320,7 +320,7 @@ proc FindNextAddedX_West
 
     inc cx
     cmp cx, nextX
-    ja @@CheckAddedSteps
+    jb @@CheckAddedSteps
 
 @@CountedSteps:
 
@@ -332,7 +332,7 @@ proc FindNextAddedX_West
 	sub cx, nextX
 
 	cmp cx, DISTANCE_FROM_BOUNDARY_X
-	jne @@ExitProc
+	jnae @@ExitProc
 
 	add nextX, DISTANCE_FROM_BOUNDARY_X
 
@@ -409,29 +409,35 @@ proc FindNextAddedX_East
 	cmp al, 0FCh
 	je @@FindMinSteps
 
-    inc cx
-    jmp @@IsTouchingBoundray
+  	inc cx
+  	jmp @@IsTouchingBoundray
 
 
 @@FindMinSteps:
 
     dec cx
     cmp cx, nextX
-    ja @@Defualt
+    ja @@CheckAddedSteps
 
 @@CountedSteps:
 
-	sub cx, FILE_COLS_PACMAN
-	mov currentX, cx ;cx value is next X value
-	jmp @@ExitProc
+		mov nextX, cx ;cx value is next X value
 
-@@Defualt:
+@@CheckAddedSteps:
+
+	mov cx, nextX
+	sub cx, normalizedX
+
+	cmp cx, DISTANCE_FROM_BOUNDARY_X
+	jnae @@ExitProc
+
+	sub nextX, DISTANCE_FROM_BOUNDARY_X
+
+@@ExitProc:
 
 	sub nextX, FILE_COLS_PACMAN
 	mov cx, nextX
 	mov currentX, cx
-
-@@ExitProc:
 
 	add sp, 6
 
@@ -480,55 +486,52 @@ proc FindNextAddedY_South
 
 	mov ax, currentY
 	mov normalizedY, ax
-	add normalizedY, NEXT_POS_ADDED_PIXELS_Y
+	add normalizedY, FILE_ROWS_PACMAN
 
 	mov ax, normalizedY
 	mov nextY, ax
 	add nextY, NEXT_POS_ADDED_PIXELS_Y
 
 	mov cx, normalizedX
-	mov dx, nextY
-	mov ah,0Dh
-	int 10h
-
-	cmp al, 0FCh
-	jne @@ExitProc
-
-	mov dx, currentY
+	mov dx, normalizedY
 	mov ah,0Dh
 
-@@FindClosestNextY:
+	@@IsTouchingBoundray:
 
 	int 10h
 
 	cmp al, 0FCh
-	jne @@ReturnClosestNextY
+	je @@FindMinSteps
 
 	inc dx
+	jmp @@IsTouchingBoundray
 
-	jmp @@FindClosestNextY
 
-@@ReturnClosestNextY:
+	@@FindMinSteps:
 
-	;dec dx
-	cmp dx, nextY
-	jb @@CountSmaller
+	    dec dx
+	    cmp dx, nextY
+	    ja @@CheckAddedSteps
 
-@@CountSmaller:
+	@@CountedSteps:
 
-	mov nextY, dx
+			mov nextY, dx ;dx value is next Y value
 
-	jmp @@ExitProc
+	@@CheckAddedSteps:
 
-@@DefualtSmaller:
+		mov dx, nextY
+		sub dx, normalizedY
 
-	add nextY, NEXT_POS_ADDED_PIXELS_Y
+		cmp dx, DISTANCE_FROM_BOUNDARY_Y
+		jnae @@ExitProc
 
-@@ExitProc:
+		sub nextY, DISTANCE_FROM_BOUNDARY_Y
 
-	sub nextY, NEXT_POS_ADDED_PIXELS_Y
-	mov dx, nextY
-	mov currentY, dx
+	@@ExitProc:
+
+		sub nextY, FILE_COLS_PACMAN
+		mov dx, nextY
+		mov currentY, dx
 
 	add sp, 6
 
@@ -555,7 +558,9 @@ endp FindNextAddedY_South
 ;=============================================
 currentY equ [bp + 6]
 currentX equ [bp + 4]
-nextY equ [bp - 6]
+nextY equ [bp - 8]
+normalizedX equ [bp - 10]
+
 
 proc FindNextAddedY_North
 

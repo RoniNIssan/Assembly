@@ -1,5 +1,3 @@
 
 
-Pacman on maze:
-1. arrange distance from boundaries
-2. check normalized values
+1. check distance from boundary
