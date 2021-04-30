@@ -35,8 +35,8 @@ QUIT_BOTTOM_ROW = 31
 MAZE_RIGHT_BOUNDARY_X = 167
 MAZE_LEFT_BOUNDARY_X = 13
 
-NEXT_POS_ADDED_PIXELS_Y = 9
-NEXT_POS_ADDED_PIXELS_X = 9
+NEXT_POS_ADDED_PIXELS_Y = 7
+NEXT_POS_ADDED_PIXELS_X = 7
 
 PACMAN_MIDDLE_X_PIXLE_WEST = (FILE_COLS_PACMAN - 1) / 2 + 1
 PACMAN_MIDDLE_Y_PIXLE_WEST = (FILE_ROWS_PACMAN - 1) / 2 + 1
@@ -71,8 +71,8 @@ DATASEG
 		matrix dw ?
 
         ;Current Position
-		;pacmanX dw 84
-		pacmanX dw 120
+		;pacmanX dw 86
+		pacmanX dw 126
     pacmanY dw 146
 
 
@@ -561,7 +561,6 @@ currentX equ [bp + 4]
 nextY equ [bp - 8]
 normalizedX equ [bp - 10]
 
-
 proc FindNextAddedY_North
 
 	push bp
@@ -573,7 +572,7 @@ proc FindNextAddedY_North
 
 	sub sp, 4
 
-	mov ax,  currentX
+	mov ax, currentX
 	mov normalizedX, ax
 	add normalizedX, PACMAN_MIDDLE_X_PIXLE_WEST
 
@@ -582,47 +581,44 @@ proc FindNextAddedY_North
 	sub nextY, NEXT_POS_ADDED_PIXELS_Y
 
 	mov cx, normalizedX
-	mov dx, nextY
-	mov ah,0Dh
-	int 10h
-
-	cmp al, 0FCh
-	jne @@ExitProc
-
 	mov dx, currentY
 	mov ah,0Dh
 
-@@FindClosestNextY:
+	@@IsTouchingBoundray:
 
 	int 10h
 
 	cmp al, 0FCh
-	jne @@ReturnClosestNextY
+	je @@FindMinSteps
 
 	dec dx
+	jmp @@IsTouchingBoundray
 
-	jmp @@FindClosestNextY
 
-@@ReturnClosestNextY:
+	@@FindMinSteps:
 
-	;inc dx
-	cmp dx, nextY
-	ja @@CountSmaller
+	    inc dx
+	    cmp dx, nextY
+	    jb @@CheckAddedSteps
 
-@@CountSmaller:
+	@@CountedSteps:
 
-	mov nextY, dx
+			mov nextY, dx ;dx value is next Y value
 
-	jmp @@ExitProc
+	@@CheckAddedSteps:
 
-@@DefualtSmaller:
+		mov dx, currentY
+		sub dx, nextY
 
-	sub nextY, NEXT_POS_ADDED_PIXELS_Y
+		cmp dx, DISTANCE_FROM_BOUNDARY_Y
+		jnae @@ExitProc
 
-@@ExitProc:
+		add nextY, DISTANCE_FROM_BOUNDARY_Y
 
-	mov dx, nextY
-	mov currentY, dx
+	@@ExitProc:
+
+		mov dx, nextY
+		mov currentY, dx
 
 	add sp, 4
 
