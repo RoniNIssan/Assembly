@@ -58,7 +58,7 @@ DATASEG
 
 		FileHandle	dw ?
 		Header 	    db 54 dup(0)
-		Palette 	db 400h dup (0)
+		Palette 	db 4001h dup (0)
 
 		BmpFileErrorMsg    	db 'Error At Opening Bmp File ',FILE_COLS_PACMAN, 0dh, 0ah,'$'
 		ErrorFile           db 0
@@ -70,15 +70,13 @@ DATASEG
 
 		matrix dw ?
 
-        ;Current Position
-		;pacmanX dw 86
-		pacmanX dw 126
+    ;Current Position
+		pacmanX dw 86
     pacmanY dw 146
 
 
         currentPoint dw ?
-		;pacmanCurrentDirection dw 'A'
-		pacmanCurrentDirection dw 'D'
+		pacmanCurrentDirection dw 'A'
 
 		;Boolean
 		Bool db 0
