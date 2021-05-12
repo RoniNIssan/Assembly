@@ -52,6 +52,8 @@ LowTimer	EQU	006Ch
 PIC8259		EQU	0020h
 EOI		    EQU	0020h
 
+TIMEOUT = 5
+
 DATASEG
 
 
@@ -64,7 +66,7 @@ DATASEG
 
 		FileHandle	dw ?
 		Header 	    db 54 dup(0)
-		Palette 	db 4001h dup (0)
+		Palette 	db 400h dup (0)
 
 		BmpFileErrorMsg    	db 'Error At Opening Bmp File ',FILE_COLS_PACMAN, 0dh, 0ah,'$'
 		ErrorFile           db 0
@@ -81,18 +83,18 @@ DATASEG
     pacmanY dw 146
 
 
-        currentPoint dw ?
+    currentPoint dw ?
 		pacmanCurrentDirection dw 'A'
 
 		;Boolean
 		Bool db 0
-
-		isDirectionChanged dw 0
+		OverTimeout db 0
 
 		;Timer
 		exitCode1	db	0
 		timerSeg	dw	?
 		timerOfs	dw	?
+		timerLbl db "TIME:",'$'
 
 pacmanBlank db	0,0,0,0,0,0,0
             db	0,0,0,0,0,0,0
@@ -119,34 +121,30 @@ start:
 
 	 call stratGraphicMode
    call StratScreen
-
-   call setPacmanCurrentPoint
+	 call printTimerLabel
 
 	 ; save the current interrupt verctor.
 	 ; the timer interrupt number is 1C
- push	es
- mov	ax, 351Ch
- int	21h
- mov	[timerSeg],es
- mov	[timerOfs],bx
- pop	es
+ 		push	es
+ 		mov	ax, 351Ch
+ 		int	21h
+ 		mov	[timerSeg],es
+ 		mov	[timerOfs],bx
+ 		pop	es
 
-	 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	 ; set the new inerrupt vector with our function
- push	ds
- mov	ax,251Ch
- push	cs
- pop	ds
- mov	dx, offset PrintSecondsElapse
- int	21h
- pop	ds
+	 ;set the new inerrupt vector with our function
+ 	 push	ds
+ 	 mov	ax,251Ch
+ 	 push	cs
+ 	 pop	ds
+ 	 mov	dx, offset PrintSecondsElapse
+ 	 int	21h
+ 	 pop	ds
 
 	 push [pacmanCurrentDirection]
 	 push [pacmanX]
 	 push [pacmanY]
 	 call PacmanFigureDisplay
-
-
 
 MainLoop:
 
@@ -173,12 +171,17 @@ MainLoop:
      cmp al, 'a'
      je WestShortcut
 
+		 cmp [OverTimeout], 1
+		 je ExitShortcut
+
 		 push	ds
 		 mov	ax,251Ch
 		 mov	dx,[timerOfs]
 		 mov	ds,[timerSeg]
 		 int	21h
 		 pop	ds
+
+
 
      jne MainLoop
 
@@ -229,7 +232,8 @@ South:
 
 MainLoopShortcut:
      jmp MainLoop
-
+ExitShortcut:
+	jmp EXIT
 East:
 
 	 push [pacmanX]
@@ -823,6 +827,40 @@ proc setPacmanCurrentPoint
 
 endp setPacmanCurrentPoint
 
+
+proc printTimerLabel
+
+	push dx
+	push bx
+	push ax
+
+	mov  dl, 33  ;Column
+	mov  dh, 16   ;Row
+	mov  bh, 0    ;Display page
+	mov  ah, 02h  ;SetCursorPosition
+	int  10h
+
+	mov dx, offset timerLbl
+	mov ah, 09
+	int 21h
+
+	mov  dl, 36  ;Column
+	mov  dh, 18   ;Row
+	mov  bh, 0    ;Display page
+	mov  ah, 02h  ;SetCursorPosition
+	int  10h
+
+	mov dl, 's'
+	mov ah, 02
+	int 21h
+
+	pop ax
+	pop bx
+	pop dx
+
+	ret
+endp printTimerLabel
+
 ;============================================================================================
 ;=======================
 ;Put bmp file on screen
@@ -1091,11 +1129,13 @@ PROC	PrintSecondsElapse
 @@10:
     mov	[cs:lastTimer], dx
     mov ax, [cs:counter]
+		cmp ax, TIMEOUT
+		ja @@TimeoutEnd
     call printAxDec
     inc [cs:counter]
 
-
-
+@@TimeoutEnd:
+	mov [OverTimeout], 1
 
 @@20:
 	cli
@@ -1123,11 +1163,12 @@ PROC printAxDec
 	   push cx
 
 		 push ax
-		 mov  dl, 35   ;Column
+		 mov  dl, 34   ;Column
 		 mov  dh, 18   ;Row
 		 mov  bh, 0    ;Display page
 		 mov  ah, 02h  ;SetCursorPosition
 		 int  10h
+
 		 pop ax
      mov cx,0   ; will count how many time we did push
      mov bx,10  ; the divider
