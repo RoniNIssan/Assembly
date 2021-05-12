@@ -45,6 +45,12 @@ PACMAN_MIDDLE_Y_PIXLE_WEST = (FILE_ROWS_PACMAN - 1) / 2 + 1
 DISTANCE_FROM_BOUNDARY_X = 2; when moving on Y - distanc1e between ghost and boundary
 DISTANCE_FROM_BOUNDARY_Y = 2; when moving on X - distance between ghost and boundary
 
+;----- Equates Timeer
+ticks		EQU	18
+BIOSData	EQU	040h
+LowTimer	EQU	006Ch
+PIC8259		EQU	0020h
+EOI		    EQU	0020h
 
 DATASEG
 
@@ -83,6 +89,10 @@ DATASEG
 
 		isDirectionChanged dw 0
 
+		;Timer
+		exitCode1	db	0
+		timerSeg	dw	?
+		timerOfs	dw	?
 
 pacmanBlank db	0,0,0,0,0,0,0
             db	0,0,0,0,0,0,0
@@ -98,8 +108,10 @@ CODESEG
     ORG 100h
 
 start:
-	 mov ax, @data
-	 mov ds,ax
+		mov	ax,@data
+		mov	ds,ax
+		mov	es,ax
+		mov	[word cs:difference],ticks
 
 
 ;========TEXT MODE========
@@ -109,6 +121,25 @@ start:
    call StratScreen
 
    call setPacmanCurrentPoint
+
+	 ; save the current interrupt verctor.
+	 ; the timer interrupt number is 1C
+ push	es
+ mov	ax, 351Ch
+ int	21h
+ mov	[timerSeg],es
+ mov	[timerOfs],bx
+ pop	es
+
+	 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	 ; set the new inerrupt vector with our function
+ push	ds
+ mov	ax,251Ch
+ push	cs
+ pop	ds
+ mov	dx, offset PrintSecondsElapse
+ int	21h
+ pop	ds
 
 	 push [pacmanCurrentDirection]
 	 push [pacmanX]
@@ -142,10 +173,16 @@ MainLoop:
      cmp al, 'a'
      je WestShortcut
 
+		 push	ds
+		 mov	ax,251Ch
+		 mov	dx,[timerOfs]
+		 mov	ds,[timerSeg]
+		 int	21h
+		 pop	ds
+
      jne MainLoop
 
 North:
-
 
 	 push [pacmanX]
 	 push [pacmanY]
@@ -236,13 +273,17 @@ West:
      jmp MainLoopShortcut
 
 EXIT:
+		push	ds
+		mov	ax,251Ch
+		mov	dx,[timerOfs]
+		mov	ds,[timerSeg]
+		int	21h
+		pop	ds
 
-     mov ah, 0
-     int 16h
-
-	 call finishGraphicMode
-	 mov ax, 4C00h
-  	 int 21h
+		call finishGraphicMode
+		mov	ah,04Ch
+		mov	al,[exitCode1]
+    int 21h
 
 
 
@@ -782,209 +823,6 @@ proc setPacmanCurrentPoint
 
 endp setPacmanCurrentPoint
 
-
-;====================================
-;Proc is_turnRight
-;Input:
-;-current point (gets from super where calculated)
-;Output
-;-able or unable to turn [Boolean varible]
-;====================================
-proc is_turnRight
-
-    push ax
-    push cx
-    push dx
-
-	mov [Bool], 0
-
-    mov cx, [pacmanX]
-    mov dx, [pacmanY]
-    mov ah, 0Dh
-
-    int 10h
-
-	cmp al, 1
-	je @@ExitProc
-
-@@DoubleCheck:
-
-    add dx, 9
-    mov ah, 0Dh
-
-    int 10h
-
- 	cmp al, 1
-	je @@ExitProc
-
-@@True:
-
-	mov [Bool], 1
-
-
-@@ExitProc:
-
-    pop dx
-    pop cx
-    pop ax
-	ret
-
-
-endp is_turnRight
-
-;====================================
-;Proc is_turnLeft
-;Input:
-;-current point (gets from super where calculated)
-;Output
-;-able or unable to turn [Boolean varible]
-;====================================
-;currentPos equ [bp + 4] ;pushed
-
-proc is_turnLeft
-
-    push ax
-    push cx
-    push dx
-
-	mov [Bool], 0
-
-    mov cx, [pacmanX]
-    mov dx, [pacmanY]
-    mov ah, 0Dh
-
-    int 10h
-
-	cmp al, 1
-	je @@ExitProc
-
-@@DoubleCheck:
-
-    add cx, 9
-    mov ah, 0Dh
-
-    int 10h
-
- 	cmp al, 1
-	je @@ExitProc
-
-@@True:
-
-	mov [Bool], 1
-
-
-@@ExitProc:
-
-    pop dx
-    pop cx
-    pop ax
-	ret
-
-
-endp is_turnLeft
-
-;====================================
-;Proc is_turnBack
-;Input:
-;-current point (gets from super where calculated)
-;Output
-;-able or unable to turn [Boolean varible]
-;====================================
-   ; currentPos equ [bp + 4]
-
-proc is_turnBack
-    push ax
-    push cx
-    push dx
-
-	mov [Bool], 0
-
-    mov cx, [pacmanX]
-    mov dx, [pacmanY]
-    add dx, 9
-    mov ah, 0Dh
-
-    int 10h
-
-	cmp al, 1
-	je @@ExitProc
-
-@@DoubleCheck:
-
-    add cx, 9
-    mov ah, 0Dh
-
-    int 10h
-
- 	cmp al, 1
-	je @@ExitProc
-
-@@True:
-
-	mov [Bool], 1
-
-
-@@ExitProc:
-
-    pop dx
-    pop cx
-    pop ax
-	ret
-
-
-endp is_turnBack
-
-;====================================
-;Proc is_turnFront
-;Input:
-;-current point (gets from super where calculated)
-;Output
-;-able or unable to turn [Boolean varible]
-;====================================
-;currentPos equ [bp + 4] ;pushed
-
-proc is_turnFront
-
-    push ax
-    push cx
-    push dx
-
-	mov [Bool], 0
-
-    mov cx, [pacmanX]
-    mov dx, [pacmanY]
-    mov ah, 0Dh
-
-    int 10h
-
-	cmp al, 1
-	je @@ExitProc
-
-@@DoubleCheck:
-
-    add cx, 9
-    mov ah, 0Dh
-
-    int 10h
-
- 	cmp al, 1
-	je @@ExitProc
-
-@@True:
-
-	mov [Bool], 1
-
-
-@@ExitProc:
-
-    pop dx
-    pop cx
-    pop ax
-	ret
-
-
-endp is_turnFront
-
 ;============================================================================================
 ;=======================
 ;Put bmp file on screen
@@ -1205,84 +1043,133 @@ proc finishGraphicMode
 
 endp finishGraphicMode
 
-;================================================
-; Description: Waits
-; INPUT: None
-; OUTPUT: Screen
-; Register Usage: CX, DX, AX
-;================================================
+;------------------------------------------------------------------------
+; PrintSecondsElapse -   Interrupt Service Routine (ISR)
+;------------------------------------------------------------------------
+;	Input:  none
+;	Output: print counter every ticks elapsed
+;       Registers:  none
+;------------------------------------------------------------------------
+inProgress	db	0
+difference	dw	0
+lastTimer   dw  0
+fixDrift    db  5
+counter     dw  0
 
-proc ToWait
+PROC	PrintSecondsElapse
+	cmp	[byte cs:inProgress],0
+	jne	@@99
+	inc	[byte cs:inProgress]
+	; this needs for the processor to be able
+    ; recognizing again an external interrupt signals
+    sti
+	push	ax
+	push	ds
+	push	dx
 
-	 mov cx, 0Fh
-	 mov dx, 4240
-	 mov ah, 86h
-	 int 15h
-	 ret
-
-endp ToWait
-
-;================================================
-; Description: Draw a Horizontal line
-; INPUT: DX [Y], CX [X], SI [WIDTH]
-; OUTPUT: Screen
-; Register Usage: AX, CX, DX, SI
-;================================================
-
-proc DrawHorizontalLine	near
-	push si
-	push cx
-DrawLine:
-	cmp si,0
-	jz ExitDrawLine
-
-    mov ah,0ch
-	int 10h    ; put pixel
+    ; this needs to tell the 8259 chip tp pass the
+    ; interrupts it receives along to the processor
+	mov	al,EOI
+	out	PIC8259,al
+	mov	ax,BIOSData
+	mov	ds,ax
 
 
-	inc cx
-	dec si
-	jmp DrawLine
-
-
-ExitDrawLine:
-	pop cx
-    pop si
-	ret
-endp DrawHorizontalLine
-
-
-;================================================
-; Description: Draw a Vertical line
-; INPUT: DX [Y], CX [X], SI [LENGHT]
-; OUTPUT: Screen
-; Register Usage: AX, CX, DX, SI
-;================================================
-
-proc DrawVerticalLine	near
-	push si
-	push dx
-
-DrawVertical:
-	cmp si,0
-	jz ExitDrawLine
-
-    mov ah,0ch
-	int 10h    ; put pixel
-
-
-
-	inc dx
-	dec si
-	jmp DrawVertical
-
-
-@@ExitDrawLine:
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ; Y O U R    C O D E
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    mov	dx, [word LowTimer]     ; read the timmer
+    push dx                     ; save the timmer
+	sub	dx,[cs:lastTimer]
+	cmp	dx, [cs:difference]
 	pop dx
-    pop si
-	ret
-endp DrawVerticalLine
+    jb	@@20
+    dec [cs:fixDrift]
+    jnz @@10
+    mov [cs:fixDrift], 5
+    inc dx
+@@10:
+    mov	[cs:lastTimer], dx
+    mov ax, [cs:counter]
+    call printAxDec
+    inc [cs:counter]
 
+
+
+
+@@20:
+	cli
+	dec	[byte cs:inProgress]
+	pop	dx
+	pop	ds
+	pop	ax
+@@99:
+	iret
+ENDP	PrintSecondsElapse
+
+;-----------------------------------------------------------------------
+;  KeyWaiting - checks if a key press is available
+;-----------------------------------------------------------------------
+;	Input:  none
+;	Output:	zf = 0 : (JNZ) Character is waiting to be read
+;		zf = 1 : (JZ) No character is waiting
+;	Registers: none (flags only)
+;-----------------------------------------------------------------------
+
+PROC printAxDec
+	   push ax
+       push bx
+	   push dx
+	   push cx
+
+		 push ax
+		 mov  dl, 35   ;Column
+		 mov  dh, 18   ;Row
+		 mov  bh, 0    ;Display page
+		 mov  ah, 02h  ;SetCursorPosition
+		 int  10h
+		 pop ax
+     mov cx,0   ; will count how many time we did push
+     mov bx,10  ; the divider
+
+put_next_to_stack:
+
+       xor dx,dx
+       div bx
+       add dl,30h
+	   ; dl is the current LSB digit
+	   ; we cant push only dl so we push all dx
+       push dx
+       inc cx
+       cmp ax,9   ; check if it is the last time to div
+       jg put_next_to_stack
+
+	   cmp ax,0
+	   jz pop_next_from_stack  ; jump if ax was totally 0
+
+       add al,30h
+	   mov dl, al
+  	   mov ah, 2h
+	   int 21h        ; show first digit MSB
+
+
+
+pop_next_from_stack:
+
+       pop ax    ; remove all rest LIFO (reverse) (MSB to LSB)
+	   mov dl, al
+     mov ah, 2h
+	   int 21h        ; show all rest digits
+       loop pop_next_from_stack
+
+	   pop cx
+	   pop dx
+	   pop bx
+	   pop ax
+       ret
+endp printAxDec
+
+;================================================
 ; in dx how many cols
 ; in cx how many rows
 ; in matrix - the bytes
