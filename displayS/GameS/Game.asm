@@ -52,7 +52,7 @@ LowTimer	EQU	006Ch
 PIC8259		EQU	0020h
 EOI		    EQU	0020h
 
-TIMEOUT = 5
+TIMEOUT = 10
 
 DATASEG
 
@@ -88,7 +88,6 @@ DATASEG
 
 		;Boolean
 		Bool db 0
-		OverTimeout db 0
 
 		;Timer
 		exitCode1	db	0
@@ -171,17 +170,13 @@ MainLoop:
      cmp al, 'a'
      je WestShortcut
 
-		 cmp [OverTimeout], 1
-		 je ExitShortcut
 
-		 push	ds
-		 mov	ax,251Ch
-		 mov	dx,[timerOfs]
-		 mov	ds,[timerSeg]
-		 int	21h
-		 pop	ds
-
-
+		 ;push	ds
+		 ;mov	ax,251Ch
+		 ;mov	dx,[timerOfs]
+		 ;mov	ds,[timerSeg]
+		 ;int	21h
+		 ;pop	ds
 
      jne MainLoop
 
@@ -211,6 +206,8 @@ WestShortcut:
 
 EastShortcut:
      jmp East
+ExitShortcut:
+		 	jmp EXIT
 South:
 
 	 push [pacmanX]
@@ -232,8 +229,7 @@ South:
 
 MainLoopShortcut:
      jmp MainLoop
-ExitShortcut:
-	jmp EXIT
+
 East:
 
 	 push [pacmanX]
@@ -1133,9 +1129,9 @@ PROC	PrintSecondsElapse
 		ja @@TimeoutEnd
     call printAxDec
     inc [cs:counter]
-
+		jmp @@20
 @@TimeoutEnd:
-	mov [OverTimeout], 1
+	jmp EXIT
 
 @@20:
 	cli
