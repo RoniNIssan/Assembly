@@ -3,7 +3,7 @@ MODEL small
 STACK 100h
 
 
-FILENAME_MAZE_DISPLAY equ 'Maze.bmp'
+FILENAME_GAME_DISPLAY equ 'Game.bmp'
 FILENAME_PACMAN_NORTH equ 'PN.bmp'
 FILENAME_PACMAN_SOUTH equ 'PS.bmp'
 FILENAME_PACMAN_EAST equ 'PE.bmp'
@@ -13,7 +13,7 @@ FILENAME_PACMAN_WEST equ 'PW.bmp'
 ;FILE_ROWS_MAZE = 200
 ;FILE_COLS_MAZE = 191
 FILE_ROWS_MAZE = 200
-FILE_COLS_MAZE = 176
+FILE_COLS_MAZE = 320
 
 ;Maze colors
 DOTS_COLOR = 14
@@ -52,12 +52,14 @@ LowTimer	EQU	006Ch
 PIC8259		EQU	0020h
 EOI		    EQU	0020h
 
-TIMEOUT = 10
+TIMEOUT = 35
+TIME_ROW = 46
+TIME_COL = 23
 
 DATASEG
 
 
-		Filename_Maze db FILENAME_MAZE_DISPLAY, 0
+		Filename_Maze db FILENAME_GAME_DISPLAY, 0
 		Filename_PacmanNorth db FILENAME_PACMAN_NORTH, 0
 		Filename_PacmanSouth db FILENAME_PACMAN_SOUTH, 0
 		Filename_PacmanEast db FILENAME_PACMAN_EAST, 0
@@ -93,7 +95,6 @@ DATASEG
 		exitCode1	db	0
 		timerSeg	dw	?
 		timerOfs	dw	?
-		timerLbl db "TIME:",'$'
 
 pacmanBlank db	0,0,0,0,0,0,0
             db	0,0,0,0,0,0,0
@@ -120,7 +121,6 @@ start:
 
 	 call stratGraphicMode
    call StratScreen
-	 call printTimerLabel
 
 	 ; save the current interrupt verctor.
 	 ; the timer interrupt number is 1C
@@ -824,39 +824,6 @@ proc setPacmanCurrentPoint
 endp setPacmanCurrentPoint
 
 
-proc printTimerLabel
-
-	push dx
-	push bx
-	push ax
-
-	mov  dl, 33  ;Column
-	mov  dh, 16   ;Row
-	mov  bh, 0    ;Display page
-	mov  ah, 02h  ;SetCursorPosition
-	int  10h
-
-	mov dx, offset timerLbl
-	mov ah, 09
-	int 21h
-
-	mov  dl, 36  ;Column
-	mov  dh, 18   ;Row
-	mov  bh, 0    ;Display page
-	mov  ah, 02h  ;SetCursorPosition
-	int  10h
-
-	mov dl, 's'
-	mov ah, 02
-	int 21h
-
-	pop ax
-	pop bx
-	pop dx
-
-	ret
-endp printTimerLabel
-
 ;============================================================================================
 ;=======================
 ;Put bmp file on screen
@@ -1127,6 +1094,9 @@ PROC	PrintSecondsElapse
     mov ax, [cs:counter]
 		cmp ax, TIMEOUT
 		ja @@TimeoutEnd
+
+		push TIME_ROW
+		push TIME_COL
     call printAxDec
     inc [cs:counter]
 		jmp @@20
@@ -1151,16 +1121,24 @@ ENDP	PrintSecondsElapse
 ;		zf = 1 : (JZ) No character is waiting
 ;	Registers: none (flags only)
 ;-----------------------------------------------------------------------
+	;cursor pos values
+	col equ [bp + 4]
+	row equ [bp + 6]
 
 PROC printAxDec
+		 push bp
+		 mov bp, sp
 	   push ax
-       push bx
+     push bx
 	   push dx
 	   push cx
 
 		 push ax
-		 mov  dl, 34   ;Column
-		 mov  dh, 18   ;Row
+
+		 mov ax, col
+		 mov  dl, al   ;Column
+		 mov ax, row
+		 mov  dh, al   ;Row
 		 mov  bh, 0    ;Display page
 		 mov  ah, 02h  ;SetCursorPosition
 		 int  10h
@@ -1203,7 +1181,8 @@ pop_next_from_stack:
 	   pop dx
 	   pop bx
 	   pop ax
-       ret
+		 pop bp
+     ret 4
 endp printAxDec
 
 ;================================================
