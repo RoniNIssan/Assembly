@@ -752,7 +752,7 @@ proc AddScore_West
 	je @@IncScore
 
 	cmp cx, nextX
-	je @@ExitProc
+	jbe @@ExitProc
 
 	dec cx
 
@@ -808,7 +808,7 @@ sub sp, 6
 ;Normalize currentY value to present to its middle pixel according to direction
 mov ax,  currentY
 mov normalizedY, ax
-add normalizedY, PACMAN_MIDDLE_Y_PIXLE_WEST
+add normalizedY, PACMAN_MIDDLE_Y_PIXLE_WEST - 1
 
 ;Containing next defualt value
 ;CurrentX is top left pacman point -> dosen't present the east muserments properly
@@ -836,7 +836,7 @@ cmp al, YELLOW_DOTS_COLOR_2
 je @@IncScore
 
 cmp cx, nextX
-je @@ExitProc
+jae @@ExitProc
 
 inc cx
 
@@ -890,7 +890,7 @@ proc AddScore_South
 
 	mov ax,  currentX
 	mov normalizedX, ax
-	add normalizedX, PACMAN_MIDDLE_X_PIXLE_WEST
+	add normalizedX, PACMAN_MIDDLE_X_PIXLE_WEST - 1
 
 	mov ax, currentY
 	mov normalizedY, ax
@@ -915,7 +915,7 @@ proc AddScore_South
 	je @@IncScore
 
 	cmp dx, nextY
-	je @@ExitProc
+	jae @@ExitProc
 
 	inc dx
 
@@ -968,7 +968,7 @@ proc AddScore_North
 
 	mov ax, currentX
 	mov normalizedX, ax
-	add normalizedX, PACMAN_MIDDLE_X_PIXLE_WEST
+	add normalizedX, PACMAN_MIDDLE_X_PIXLE_WEST - 1
 
 	push currentY
 	push currentX
@@ -989,7 +989,7 @@ proc AddScore_North
 	je @@IncScore
 
 	cmp dx, nextY
-	je @@ExitProc
+	jbe @@ExitProc
 
 	dec dx
 
