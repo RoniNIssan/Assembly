@@ -15,7 +15,8 @@ FILE_COLS_MAZE = 320
 
 ;Maze colors
 BLUE_BOUNDARY_COLOR = 0FCh
-YELLOW_BOUNDARY_COLOR = 07Fh
+YELLOW_DOTS_COLOR_1 = 07Fh
+YELLOW_DOTS_COLOR_2 = 0FBh
 
 ;Pacman figure
 FILE_ROWS_PACMAN = 9
@@ -55,7 +56,8 @@ TIME_COL = 23
 
 ;Score
 SCORE_ROW = 36
-SCORE_COL = 23
+SCORE_COL = 22
+SCORE_ADDED_POINTS = 10
 
 DATASEG
 
@@ -82,7 +84,7 @@ DATASEG
 	matrix dw ?
 
 	;Current Position
-	pacmanX dw 86
+	pacmanX dw 86 - NEXT_POS_ADDED_PIXELS_X
 	pacmanY dw 146
 
 
@@ -200,6 +202,10 @@ North:
 
  push [pacmanY]
  push [pacmanX]
+ call AddScore_North
+
+ push [pacmanY]
+ push [pacmanX]
  call FindNextAddedY_North
 
  pop [pacmanY]
@@ -216,15 +222,18 @@ WestShortcut:
 
 EastShortcut:
 	 jmp East
-ExitShortcut:
-		jmp EXIT
+
 South:
 
  push [pacmanX]
  push [pacmanY]
-	 call removePacman
+ call removePacman
 
  mov [pacmanCurrentDirection], 'S'
+
+ push [pacmanY]
+ push [pacmanX]
+ call AddScore_South
 
  push [pacmanY]
  push [pacmanX]
@@ -244,9 +253,13 @@ East:
 
  push [pacmanX]
  push [pacmanY]
-	 call removePacman
+ call removePacman
 
  mov [pacmanCurrentDirection], 'D'
+
+ push [pacmanX]
+ push [pacmanY]
+ call AddScore_East
 
  push [pacmanX]
  push [pacmanY]
@@ -718,22 +731,24 @@ proc AddScore_West
 
 	mov ax,  currentY
 	mov normalizedY, ax
-	add normalizedY, PACMAN_MIDDLE_Y_PIXLE_WEST
+	add normalizedY, PACMAN_MIDDLE_Y_PIXLE_WEST - 1
 
-	mov ax, currentX
-	mov nextX, ax
-	sub nextX, NEXT_POS_ADDED_PIXELS_X
+	push currentX
+	push currentY
+	call FindNextAddedX_West
+	pop nextX
 
 	mov cx, currentX
 	mov dx, normalizedY
 	mov ah,0Dh
 
-FindNextDot:
+@@FindNextDot:
 
 	int 10h
 
-	cmp al, YELLOW_BOUNDARY_COLOR
-	jne @@ExitProc
+	cmp al, YELLOW_DOTS_COLOR_1
+	je @@IncScore
+	cmp al, YELLOW_DOTS_COLOR_2
 	je @@IncScore
 
 	cmp cx, nextX
@@ -741,10 +756,11 @@ FindNextDot:
 
 	dec cx
 
-	jmp FindNextDot
+	jmp @@FindNextDot
+
 @@IncScore:
 
-	inc [score]
+	add [score], SCORE_ADDED_POINTS
 
 @@ExitProc:
 
@@ -759,6 +775,242 @@ FindNextDot:
 	ret 4
 
 endp AddScore_West
+;=============================================
+;Changes score.
+;--------------------------------------------
+;Input:
+;1- CurrentXPos
+;2- CurrentYPos
+;--------------------------------------------
+;Registers:
+;bp, cx, dx, ax
+;--------------------------------------------
+;Output:
+;score - global varible
+;=============================================
+currentX equ [bp + 6]
+currentY equ [bp + 4]
+nextX equ [bp - 8]
+normalizedY equ [bp - 10]
+normalizedX equ [bp - 12]
+
+proc AddScore_East
+
+push bp
+mov bp, sp
+
+push ax
+push dx
+push cx
+
+sub sp, 6
+
+;Normalize currentY value to present to its middle pixel according to direction
+mov ax,  currentY
+mov normalizedY, ax
+add normalizedY, PACMAN_MIDDLE_Y_PIXLE_WEST
+
+;Containing next defualt value
+;CurrentX is top left pacman point -> dosen't present the east muserments properly
+mov ax, currentX
+mov normalizedX, ax
+add normalizedX, FILE_COLS_PACMAN
+
+
+push currentX
+push currentY
+call FindNextAddedX_East
+pop nextX
+
+mov cx, normalizedX
+mov dx, normalizedY
+mov ah,0Dh
+
+@@FindNextDot:
+
+int 10h
+
+cmp al, YELLOW_DOTS_COLOR_1
+je @@IncScore
+cmp al, YELLOW_DOTS_COLOR_2
+je @@IncScore
+
+cmp cx, nextX
+je @@ExitProc
+
+inc cx
+
+jmp @@FindNextDot
+
+@@IncScore:
+
+add [score], SCORE_ADDED_POINTS
+
+@@ExitProc:
+
+add sp, 6
+
+pop cx
+pop dx
+pop ax
+pop bp
+
+ret 4
+
+endp AddScore_East
+;=============================================
+;Changes score.
+;--------------------------------------------
+;Input:
+;1- CurrentXPos
+;2- CurrentYPos
+;--------------------------------------------
+;Registers:
+;bp, cx, dx, ax
+;--------------------------------------------
+;Output:
+;score - global varible
+;=============================================
+currentY equ [bp + 6]
+currentX equ [bp + 4]
+nextY equ [bp - 8]
+normalizedX equ [bp - 10]
+normalizedY equ [bp - 12]
+
+proc AddScore_South
+
+	push bp
+	mov bp, sp
+
+	push ax
+	push dx
+	push cx
+
+	sub sp, 6
+
+	mov ax,  currentX
+	mov normalizedX, ax
+	add normalizedX, PACMAN_MIDDLE_X_PIXLE_WEST
+
+	mov ax, currentY
+	mov normalizedY, ax
+	add normalizedY, FILE_ROWS_PACMAN
+
+	push currentY
+	push currentX
+	call FindNextAddedY_South
+	pop nextX
+
+	mov cx, normalizedX
+	mov dx, normalizedY
+	mov ah,0Dh
+
+@@FindNextDot:
+
+	int 10h
+
+	cmp al, YELLOW_DOTS_COLOR_1
+	je @@IncScore
+	cmp al, YELLOW_DOTS_COLOR_2
+	je @@IncScore
+
+	cmp dx, nextY
+	je @@ExitProc
+
+	inc dx
+
+	jmp @@FindNextDot
+
+@@IncScore:
+
+	add [score], SCORE_ADDED_POINTS
+
+@@ExitProc:
+
+	add sp, 6
+
+	pop cx
+	pop dx
+	pop ax
+	pop bp
+
+	ret 4
+
+endp AddScore_South
+;=============================================
+;Changes score.
+;--------------------------------------------
+;Input:
+;1- CurrentXPos
+;2- CurrentYPos
+;--------------------------------------------
+;Registers:
+;bp, cx, dx, ax
+;--------------------------------------------
+;Output:
+;score - global varible
+;=============================================
+currentY equ [bp + 6]
+currentX equ [bp + 4]
+nextY equ [bp - 8]
+normalizedX equ [bp - 10]
+
+proc AddScore_North
+
+	push bp
+	mov bp, sp
+
+	push ax
+	push dx
+	push cx
+
+	sub sp, 4
+
+	mov ax, currentX
+	mov normalizedX, ax
+	add normalizedX, PACMAN_MIDDLE_X_PIXLE_WEST
+
+	push currentY
+	push currentX
+	call FindNextAddedY_North
+	pop nextX
+
+	mov cx, normalizedX
+	mov dx, normalizedY
+	mov ah,0Dh
+
+@@FindNextDot:
+
+	int 10h
+
+	cmp al, YELLOW_DOTS_COLOR_1
+	je @@IncScore
+	cmp al, YELLOW_DOTS_COLOR_2
+	je @@IncScore
+
+	cmp dx, nextY
+	je @@ExitProc
+
+	dec dx
+
+	jmp @@FindNextDot
+
+@@IncScore:
+
+	add [score], SCORE_ADDED_POINTS
+
+@@ExitProc:
+
+	add sp, 4
+
+	pop cx
+	pop dx
+	pop ax
+	pop bp
+
+	ret 4
+
+endp AddScore_North
 ;=============================================
 ;Remove pacman and dots (9*9)
 ;--------------------------------------------
