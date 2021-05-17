@@ -23,10 +23,10 @@ FILE_ROWS_PACMAN = 9
 FILE_COLS_PACMAN = 9
 
 ;Quit Banner values
-QUIT_RIGHT_COL = 34
-QUIT_LEFT_COL = 10
-QUIT_TOP_ROW = 6
-QUIT_BOTTOM_ROW = 31
+QUIT_RIGHT_COL = 313
+QUIT_LEFT_COL = 289
+QUIT_TOP_ROW = 9
+QUIT_BOTTOM_ROW = 33
 
 ;Pacman values
 MAZE_RIGHT_BOUNDARY_X = 167
@@ -41,6 +41,9 @@ PACMAN_MIDDLE_Y_PIXLE_WEST = (FILE_ROWS_PACMAN - 1) / 2 + 1
 ;Needed when turn:
 DISTANCE_FROM_BOUNDARY_X = 2; when moving on Y - distanc1e between ghost and boundary
 DISTANCE_FROM_BOUNDARY_Y = 2; when moving on X - distance between ghost and boundary
+MAZE_RIGHT_EDGE_X = 172
+MAZE_LEFT_EDGE_X = 8
+
 
 ;----- Equates Timeer
 ticks		EQU	18
@@ -84,10 +87,8 @@ DATASEG
 	matrix dw ?
 
 	;Current Position
-	;pacmanX dw 86
-	;pacmanY dw 146
-	pacmanX dw 44
-	pacmanY dw 128
+	pacmanX dw 86
+	pacmanY dw 146
 
 	currentPoint dw ?
 	pacmanCurrentDirection dw 'D'
@@ -102,6 +103,10 @@ DATASEG
 
 	;Score
 	score dw 0
+
+	;Mouse
+	MouseX dw ?
+	MouseY dw ?
 
 pacmanBlank db	0,0,0,0,0,0,0
 					db	0,0,0,0,0,0,0
@@ -129,6 +134,11 @@ start:
  call stratGraphicMode
  call StratScreen
 
+ mov ax,0h
+ int 33h
+
+ mov ax,1h
+ int 33h
 
  call Timer
 
@@ -137,8 +147,29 @@ start:
  push [pacmanY]
  call PacmanFigureDisplay
 
+
 MainLoop:
 
+	 mov ax, 3h
+	 int 33h
+
+	 shr cx, 1
+	 mov [MouseX], cx
+	 mov [MouseY], dx
+
+	 push QUIT_LEFT_COL
+	 push QUIT_RIGHT_COL
+	 push QUIT_TOP_ROW
+	 push QUIT_BOTTOM_ROW
+	 call isInRange
+
+	 cmp [Bool], 1
+	 jne Continue
+
+	 cmp bx, 1
+	 je ExitShourtcut
+
+Continue:
 
 	call ScoreDisplay
 	;push SCORE_ROW - 2
@@ -214,7 +245,8 @@ WestShortcut:
 
 EastShortcut:
 	 jmp East
-
+ExitShourtcut:
+	jmp EXIT
 South:
 
  push [pacmanX]
@@ -406,10 +438,13 @@ mov ah,0Dh
 
 @@IsTouchingBoundray:
 
-int 10h
+	int 10h
 
-cmp al, BLUE_BOUNDARY_COLOR
-je @@FindMinSteps
+	cmp al, BLUE_BOUNDARY_COLOR
+	je @@FindMinSteps
+
+	cmp cx, nextX
+	jbe @@FindMinSteps
 
 	dec cx
 	jmp @@IsTouchingBoundray
@@ -434,6 +469,13 @@ cmp cx, DISTANCE_FROM_BOUNDARY_X
 jnae @@ExitProc
 
 add nextX, DISTANCE_FROM_BOUNDARY_X
+
+@@CheckEdge:
+
+	cmp nextX, MAZE_LEFT_EDGE_X
+	jnbe @@ExitProc
+
+	mov nextX, MAZE_RIGHT_EDGE_X - FILE_COLS_PACMAN
 
 @@ExitProc:
 
@@ -503,10 +545,13 @@ mov ah,0Dh
 
 @@IsTouchingBoundray:
 
-int 10h
+	int 10h
 
-cmp al, BLUE_BOUNDARY_COLOR
-je @@FindMinSteps
+	cmp al, BLUE_BOUNDARY_COLOR
+	je @@FindMinSteps
+
+	cmp cx, nextX
+	jae @@FindMinSteps
 
 	inc cx
 	jmp @@IsTouchingBoundray
@@ -531,6 +576,13 @@ cmp cx, DISTANCE_FROM_BOUNDARY_X
 jnae @@ExitProc
 
 sub nextX, DISTANCE_FROM_BOUNDARY_X
+
+@@CheckEdge:
+
+	cmp nextX, MAZE_RIGHT_EDGE_X
+	jnae @@ExitProc
+
+	mov nextX, MAZE_LEFT_EDGE_X + FILE_COLS_PACMAN
 
 @@ExitProc:
 
@@ -1044,6 +1096,71 @@ proc AddScore_North
 	ret 4
 
 endp AddScore_North
+;=============================================
+;Check mouse position on buttons
+;--------------------------------------------
+;Input:
+;1- MouseX -> cx (shr cx, 1)
+;2- MouseY -> dx
+;Stack inputs:
+;left column, right column
+;top row, bottom row
+;--------------------------------------------
+;Registers:
+; ax, bp
+;--------------------------------------------
+;Output:
+;varible Bool 1 true/ 0 false
+;=============================================
+
+;Button values
+leftCol equ [bp + 10]
+rightCol equ [bp + 8]
+topRow equ [bp + 6]
+bottomRow equ [bp + 4]
+
+proc isInRange
+
+	 push bp
+	 mov bp, sp
+
+ 	 push ax
+
+	 mov [Bool], 0
+
+Rows_Check:
+
+     ;mouse pos bigger than button edge
+	 mov ax, [MouseX]
+
+   cmp ax, rightCol
+	 ja @@ExitProc
+
+     cmp ax, leftCol
+	 jb @@ExitProc
+
+Col_Check:
+
+	 mov ax, [MouseY]
+
+     cmp ax, topRow
+	 jb @@ExitProc
+
+	 cmp ax, bottomRow
+	 ja @@ExitProc
+
+	 mov [Bool], 1
+
+
+@@ExitProc:
+
+	 pop ax
+     pop bp
+
+	 ret 4
+
+endp isInRange
+
 ;=============================================
 ;Remove pacman and dots (9*9)
 ;--------------------------------------------

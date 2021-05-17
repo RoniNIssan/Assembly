@@ -1,6 +1,6 @@
 	IDEAL
-MODEL small 
-STACK 100h	
+MODEL small
+STACK 100h
 
 
 
@@ -11,7 +11,7 @@ FILENAME_Inst equ 'Inst.bmp'
 
 
 FILE_ROWS = 200
-FILE_COLS = 320 
+FILE_COLS = 320
 
 ;Play Banner values
 PLAY_RIGHT_COL = 187
@@ -39,10 +39,10 @@ QUIT_TOP_ROW = 6
 QUIT_BOTTOM_ROW = 31
 
 DATASEG
-	 
 
 
-	
+
+
 		Filename_StartScreen db FILENAME_SCREEN, 0
 		Filename_PlayButton db FILENAME_PLAY, 0
 		Filename_LbButton db FILENAME_LB, 0
@@ -51,16 +51,16 @@ DATASEG
 
 		FileHandle	dw ?
 		Header 	    db 54 dup(0)
-		Palette 	db 400h dup (0)	
-		
+		Palette 	db 400h dup (0)
+
 		BmpFileErrorMsg    	db 'Error At Opening Bmp File ',FILENAME_SCREEN, 0dh, 0ah,'$'
 		ErrorFile           db 0
-	
+
 		BmpLeft dw ?
 		BmpTop dw ?
 		BmpColSize dw ?
 		BmpRowSize dw ?
-		
+
 		matrix dw ?
 
         ;Mouse Varibles
@@ -68,7 +68,7 @@ DATASEG
         MouseY dw ?
 
 		;Boolean
-		Bool db 0 
+		Bool db 0
 		isButtonOn db 0
 
 		;Buttons on
@@ -80,7 +80,7 @@ DATASEG
 CODESEG
 
     ORG 100h
-	
+
 start:
 	 mov ax, @data
 	 mov ds,ax
@@ -101,8 +101,8 @@ start:
 CheckStatus:
 
 
-     mov ax, 3h
-	 int 33h	
+   mov ax, 3h
+	 int 33h
 
 	 shr cx, 1
 	 mov [MouseX], cx
@@ -114,13 +114,13 @@ CheckStatus:
 	 push QUIT_TOP_ROW
 	 push QUIT_BOTTOM_ROW
 	 call isInRange
- 
+
 	 cmp [Bool], 1
 	 jne PlayBanner
-	 
+
 	 cmp bx, 1
 	 je ExitShourtcut
-	 
+
 
 PlayBanner:
 
@@ -130,7 +130,7 @@ PlayBanner:
 	 push PLAY_BOTTOM_ROW
 	 call isInRange
 
-	 cmp [Bool], 1	
+	 cmp [Bool], 1
 	 jne LeaderBoardBanner
 
 	 cmp bx, 1
@@ -156,7 +156,7 @@ PlayClick:
 ExitShourtcut:
 	 jmp EXIT
 
-	
+
 LeaderBoardBanner:
 
 	 push LB_LEFT_COL
@@ -231,7 +231,7 @@ GameInstructionsBanner:
 
 	 mov [isButtonOn], 0
      call StratScreen
-    
+
  	 mov ax,1h
 	 int 33h
 
@@ -245,7 +245,7 @@ EXIT:
 	 call finishGraphicMode
 	 mov ax, 4C00h ; returns control to dos
   	 int 21h
-  
+
 
 ;=============================================
 ;Check if quit button is pressed
@@ -253,22 +253,22 @@ EXIT:
 ;Output:
 ;varible Bool 1 true/ 0 false
 ;=============================================
-proc isQuitPressed 
+proc isQuitPressed
 
 	 push QUIT_LEFT_COL
 	 push QUIT_RIGHT_COL
 	 push QUIT_TOP_ROW
 	 push QUIT_BOTTOM_ROW
 	 call isInRange
- 
+
 	 ret
 
-endp isQuitPressed 
+endp isQuitPressed
 
 ;=============================================
 ;Check mouse position on buttons
 ;--------------------------------------------
-;Input: 
+;Input:
 ;1- MouseX -> cx (shr cx, 1)
 ;2- MouseY -> dx
 ;Stack inputs:
@@ -294,7 +294,7 @@ proc isInRange
 	 mov bp, sp
 
  	 push ax
-	 
+
 	 mov [Bool], 0
 
 Rows_Check:
@@ -325,7 +325,7 @@ Col_Check:
 
 	 pop ax
      pop bp
-	 
+
 	 ret 4
 
 endp isInRange
@@ -389,7 +389,7 @@ proc InstButtonDisplay
      mov [BmpTop],0
      mov [BmpColSize], FILE_COLS
      mov [BmpRowSize] ,FILE_ROWS
-     call OpenShowBmp 
+     call OpenShowBmp
 
 	 ret
 
@@ -399,42 +399,42 @@ endp InstButtonDisplay
 ;Put bmp file on screen
 ;======================
  proc OpenShowBmp near
-	
-	 
+
+
 	call OpenBmpFile
 	cmp [ErrorFile],1
 	je @@ExitProc
-	
+
 	call ReadBmpHeader
-	
+
 	call ReadBmpPalette
-	
+
 	call CopyBmpPalette
-	
+
 	call  ShowBMP
-	
-	 
+
+
 	call CloseBmpFile
 
 @@ExitProc:
 	ret
-endp OpenShowBmp 
+endp OpenShowBmp
 
 
 
 
 ; input dx filename to open
-proc OpenBmpFile	near						 
+proc OpenBmpFile	near
 	mov ah, 3Dh
 	xor al, al
 	int 21h
 	jc @@ErrorAtOpen
 	mov [FileHandle], ax
 	jmp @@ExitProc
-	
+
 @@ErrorAtOpen:
 	mov [ErrorFile],1
-@@ExitProc:	
+@@ExitProc:
 	ret
 endp OpenBmpFile
 
@@ -448,16 +448,16 @@ endp CloseBmpFile
 
 
 ; Read 54 bytes the Header
-proc ReadBmpHeader	near					
+proc ReadBmpHeader	near
 	push cx
 	push dx
-	
+
 	mov ah,3fh
 	mov bx, [FileHandle]
 	mov cx,54
 	mov dx,offset Header
 	int 21h
-	
+
 	pop dx
 	pop cx
 	ret
@@ -465,18 +465,18 @@ endp ReadBmpHeader
 
 
 proc ReadBmpPalette near ; Read BMP file color palette, 256 colors * 4 bytes (400h)
-						 ; 4 bytes for each color BGR + null)			
+						 ; 4 bytes for each color BGR + null)
 	push cx
 	push dx
-	
+
 	mov ah,3fh
 	mov cx,400h
 	mov dx,offset Palette
 	int 21h
-	
+
 	pop dx
 	pop cx
-	
+
 	ret
 endp ReadBmpPalette
 ;===============================================
@@ -484,52 +484,52 @@ endp ReadBmpPalette
 ; video ports are 3C8h for number of first color
 ; and 3C9h for all rest
 ;==============================================
-proc CopyBmpPalette		near					
-										
+proc CopyBmpPalette		near
+
 	push cx
 	push dx
-	
+
 	mov si,offset Palette
 	mov cx,256
 	mov dx,3C8h
-	mov al,0  ; black first							
+	mov al,0  ; black first
 	out dx,al ;3C8h
 	inc dx	  ;3C9h
 CopyNextColor:
-	mov al,[si+2] 		; Red				
-	shr al,2 			; divide by 4 Max (cos max is 63 and we have here max 255 ) (loosing color resolution).				
-	out dx,al 						
-	mov al,[si+1] 		; Green.				
-	shr al,2            
-	out dx,al 							
-	mov al,[si] 		; Blue.				
-	shr al,2            
-	out dx,al 							
-	add si,4 			; Point to next color.  (4 bytes for each color BGR + null)				
-								
+	mov al,[si+2] 		; Red
+	shr al,2 			; divide by 4 Max (cos max is 63 and we have here max 255 ) (loosing color resolution).
+	out dx,al
+	mov al,[si+1] 		; Green.
+	shr al,2
+	out dx,al
+	mov al,[si] 		; Blue.
+	shr al,2
+	out dx,al
+	add si,4 			; Point to next color.  (4 bytes for each color BGR + null)
+
 	loop CopyNextColor
-	
+
 	pop dx
 	pop cx
-	
+
 	ret
 endp CopyBmpPalette
 
 ;================================================
 ; BMP graphics are saved upside-down.
 ; Read the graphic line by line (BmpRowSize lines in VGA format),
-; displaying the lines from bottom to top. 
+; displaying the lines from bottom to top.
 ;================================================
-proc ShowBMP 
+proc ShowBMP
 
 	push cx
-	
+
 	mov ax, 0A000h
 	mov es, ax
-	
+
 	mov cx,[BmpRowSize]
-	
- 
+
+
 	mov ax,[BmpColSize] ; row size must dived by 4 so if it less we must calculate the extra padding bytes
 	xor dx,dx
 	mov si,4
@@ -540,17 +540,17 @@ proc ShowBMP
 	mov bp,4
 	sub bp,dx
 
-@@row_ok:	
+@@row_ok:
 	mov dx,[BmpLeft]
-	
+
 @@NextLine:
 	push cx
 	push dx
-	
+
 	mov di,cx  ; Current Row at the small bmp (each time -1)
 	add di,[BmpTop] ; add the Y on entire screen
-	
- 
+
+
 	; next 5 lines  di will be  = cx*320 + dx , point to the correct screen line
 	dec di
 	mov cx,di
@@ -558,69 +558,69 @@ proc ShowBMP
 	shl di,8
 	add di,cx
 	add di,dx
-	 
+
 	; small Read one line
 	mov ah,3fh
-	mov cx,[BmpColSize]  
+	mov cx,[BmpColSize]
 	add cx,bp  ; extra  bytes to each row must be divided by 4
 	mov dx,offset ScrLine
 	int 21h
 	; Copy one line into video memory
 	cld ; Clear direction flag, for movsb
-	mov cx,[BmpColSize]  
+	mov cx,[BmpColSize]
 	mov si,offset ScrLine
 	rep movsb ; Copy line to the screen
-	
+
 	pop dx
 	pop cx
-	 
+
 	loop @@NextLine
-	
+
 	pop cx
 	ret
-endp ShowBMP 
+endp ShowBMP
 
-	
+
 ;================================================
 ; Description: Graphic Mode
 ; INPUT: None
-; OUTPUT: Screen 
-; Register Usage: AX  
+; OUTPUT: Screen
+; Register Usage: AX
 ;================================================
-	 
+
 proc stratGraphicMode
 
 	 mov ax, 13h
 	 int 10h
 
 	 ret
-	
-endp stratGraphicMode	
+
+endp stratGraphicMode
 
 ;================================================
 ; Description: End Graphic Mode
 ; INPUT: None
-; OUTPUT: Screen 
-; Register Usage: AX  
+; OUTPUT: Screen
+; Register Usage: AX
 ;================================================
-	 
+
 proc finishGraphicMode
 
 	 mov al, 3
 	 mov ah, 0
 	 int 10h
-	 
+
 	 ret
-	
+
 endp finishGraphicMode
 
 ;================================================
 ; Description: Waits
 ; INPUT: None
-; OUTPUT: Screen 
-; Register Usage: CX, DX, AX  
+; OUTPUT: Screen
+; Register Usage: CX, DX, AX
 ;================================================
-	 
+
 proc ToWait
 
 	 mov cx, 0Fh
@@ -628,32 +628,32 @@ proc ToWait
 	 mov ah, 86h
 	 int 15h
 	 ret
-	
-endp ToWait	
+
+endp ToWait
 
 ;================================================
 ; Description: Draw a Horizontal line
 ; INPUT: DX [Y], CX [X], SI [WIDTH]
-; OUTPUT: Screen 
+; OUTPUT: Screen
 ; Register Usage: AX, CX, DX, SI
 ;================================================
-	
+
 proc DrawHorizontalLine	near
 	push si
 	push cx
 DrawLine:
 	cmp si,0
-	jz ExitDrawLine	
-	 
-    mov ah,0ch	
+	jz ExitDrawLine
+
+    mov ah,0ch
 	int 10h    ; put pixel
-		
-	
+
+
 	inc cx
 	dec si
 	jmp DrawLine
-	
-	
+
+
 ExitDrawLine:
 	pop cx
     pop si
@@ -664,34 +664,34 @@ endp DrawHorizontalLine
 ;================================================
 ; Description: Draw a Vertical line
 ; INPUT: DX [Y], CX [X], SI [LENGHT]
-; OUTPUT: Screen 
+; OUTPUT: Screen
 ; Register Usage: AX, CX, DX, SI
 ;================================================
-	
+
 proc DrawVerticalLine	near
 	push si
 	push dx
- 
+
 DrawVertical:
 	cmp si,0
-	jz ExitDrawLine	
-	 
-    mov ah,0ch	
+	jz ExitDrawLine
+
+    mov ah,0ch
 	int 10h    ; put pixel
-	
-	 
-	
+
+
+
 	inc dx
 	dec si
 	jmp DrawVertical
-	
-	
+
+
 @@ExitDrawLine:
 	pop dx
     pop si
 	ret
-endp DrawVerticalLine	
+endp DrawVerticalLine
 
 
 
-END start	
+END start
