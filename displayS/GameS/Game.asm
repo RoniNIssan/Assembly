@@ -35,7 +35,7 @@ MAZE_LEFT_BOUNDARY_X = 13
 NEXT_POS_ADDED_PIXELS_Y = 7
 NEXT_POS_ADDED_PIXELS_X = 7
 
-PACMAN_MIDDLE_X_PIXLE_WEST = (FILE_COLS_PACMAN - 1) / 2 + 1
+PACMAN_MIDDLE_X_PIXLE = (FILE_COLS_PACMAN - 1) / 2 + 1
 PACMAN_MIDDLE_Y_PIXLE_WEST = (FILE_ROWS_PACMAN - 1) / 2 + 1
 
 ;Needed when turn:
@@ -49,7 +49,7 @@ LowTimer	EQU	006Ch
 PIC8259		EQU	0020h
 EOI		    EQU	0020h
 
-TIMEOUT = 35
+TIMEOUT = 90
 TIME_ROW = 46
 TIME_COL = 23
 
@@ -84,12 +84,13 @@ DATASEG
 	matrix dw ?
 
 	;Current Position
-	pacmanX dw 86 - NEXT_POS_ADDED_PIXELS_X
-	pacmanY dw 146
-
+	;pacmanX dw 86
+	;pacmanY dw 146
+	pacmanX dw 44
+	pacmanY dw 128
 
 	currentPoint dw ?
-	pacmanCurrentDirection dw 'A'
+	pacmanCurrentDirection dw 'D'
 
 	;Boolean
 	Bool db 0
@@ -129,23 +130,7 @@ start:
  call StratScreen
 
 
- ; save the current interrupt verctor.
- ; the timer interrupt number is 1C
-	push	es
-	mov	ax, 351Ch
-	int	21h
-	mov	[timerSeg],es
-	mov	[timerOfs],bx
-	pop	es
-
- ;set the new inerrupt vector with our function
- push	ds
- mov	ax,251Ch
- push	cs
- pop	ds
- mov	dx, offset PrintSecondsElapse
- int	21h
- pop	ds
+ call Timer
 
  push [pacmanCurrentDirection]
  push [pacmanX]
@@ -154,10 +139,17 @@ start:
 
 MainLoop:
 
-  push SCORE_ROW
-  push SCORE_COL
-  mov ax, [score]
-  call printAxDec
+
+	call ScoreDisplay
+	;push SCORE_ROW - 2
+	;push SCORE_COL
+	;mov ax, [pacmanX]
+	;call printAxDec
+
+	;push SCORE_ROW - 3
+	;push SCORE_COL
+	;mov ax, [pacmanY]
+	;call printAxDec
 
  	 mov ah, 0
  	 int 16h
@@ -331,6 +323,45 @@ proc StratScreen
 	 ret
 
 endp StratScreen
+
+;======================
+;Timer initalizing
+;=====================
+proc Timer
+
+	 ; save the current interrupt verctor.
+	 ; the timer interrupt number is 1C
+ 	 push	es
+ 	 mov	ax, 351Ch
+ 	 int	21h
+ 	 mov	[timerSeg],es
+ 	 mov	[timerOfs],bx
+ 	 pop	es
+
+	 ;set the new inerrupt vector with our function
+	 push	ds
+	 mov	ax,251Ch
+	 push	cs
+	 pop	ds
+	 mov	dx, offset PrintSecondsElapse
+	 int	21h
+	 pop	ds
+	 ret
+
+endp Timer
+
+;======================
+;Timer initalizing
+;=====================
+proc ScoreDisplay
+
+	 push SCORE_ROW
+	 push SCORE_COL
+	 mov ax, [score]
+	 call printAxDec
+	 ret
+
+endp ScoreDisplay
 ;=============================================
 ;Find next X value considering bounderies.
 ;--------------------------------------------
@@ -550,7 +581,7 @@ sub sp, 6
 
 mov ax,  currentX
 mov normalizedX, ax
-add normalizedX, PACMAN_MIDDLE_X_PIXLE_WEST
+add normalizedX, PACMAN_MIDDLE_X_PIXLE
 
 mov ax, currentY
 mov normalizedY, ax
@@ -642,7 +673,7 @@ sub sp, 4
 
 mov ax, currentX
 mov normalizedX, ax
-add normalizedX, PACMAN_MIDDLE_X_PIXLE_WEST
+add normalizedX, PACMAN_MIDDLE_X_PIXLE
 
 mov ax, currentY
 mov nextY, ax
@@ -821,6 +852,7 @@ push currentX
 push currentY
 call FindNextAddedX_East
 pop nextX
+add nextX, FILE_COLS_PACMAN
 
 mov cx, normalizedX
 mov dx, normalizedY
@@ -888,9 +920,9 @@ proc AddScore_South
 
 	sub sp, 6
 
-	mov ax,  currentX
+	mov ax, currentX
 	mov normalizedX, ax
-	add normalizedX, PACMAN_MIDDLE_X_PIXLE_WEST - 1
+	add normalizedX, PACMAN_MIDDLE_X_PIXLE - 1
 
 	mov ax, currentY
 	mov normalizedY, ax
@@ -899,7 +931,8 @@ proc AddScore_South
 	push currentY
 	push currentX
 	call FindNextAddedY_South
-	pop nextX
+	pop nextY
+	add nextY, FILE_ROWS_PACMAN
 
 	mov cx, normalizedX
 	mov dx, normalizedY
@@ -968,15 +1001,15 @@ proc AddScore_North
 
 	mov ax, currentX
 	mov normalizedX, ax
-	add normalizedX, PACMAN_MIDDLE_X_PIXLE_WEST - 1
+	add normalizedX, PACMAN_MIDDLE_X_PIXLE - 1
 
 	push currentY
 	push currentX
 	call FindNextAddedY_North
-	pop nextX
+	pop nextY
 
 	mov cx, normalizedX
-	mov dx, normalizedY
+	mov dx, currentY
 	mov ah,0Dh
 
 @@FindNextDot:
