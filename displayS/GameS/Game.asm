@@ -109,12 +109,12 @@ DATASEG
 	MouseY dw ?
 
 pacmanBlank db	0,0,0,0,0,0,0
-					db	0,0,0,0,0,0,0
-					db	0,0,0,0,0,0,0
-					db	0,0,0,0,0,0,0
-					db	0,0,0,0,0,0,0
-					db	0,0,0,0,0,0,0
-					db	0,0,0,0,0,0,0
+						db	0,0,0,0,0,0,0
+						db	0,0,0,0,0,0,0
+						db	0,0,0,0,0,0,0
+						db	0,0,0,0,0,0,0
+						db	0,0,0,0,0,0,0
+						db	0,0,0,0,0,0,0
 
 
 CODESEG
@@ -150,37 +150,17 @@ start:
 
 MainLoop:
 
-	 mov ax, 3h
-	 int 33h
-
-	 shr cx, 1
-	 mov [MouseX], cx
-	 mov [MouseY], dx
-
-	 push QUIT_LEFT_COL
-	 push QUIT_RIGHT_COL
-	 push QUIT_TOP_ROW
-	 push QUIT_BOTTOM_ROW
-	 call isInRange
-
-	 cmp [Bool], 1
-	 jne Continue
-
-	 cmp bx, 1
-	 je ExitShourtcut
-
-Continue:
-
 	call ScoreDisplay
-	;push SCORE_ROW - 2
-	;push SCORE_COL
-	;mov ax, [pacmanX]
-	;call printAxDec
 
-	;push SCORE_ROW - 3
-	;push SCORE_COL
-	;mov ax, [pacmanY]
-	;call printAxDec
+	push SCORE_ROW - 2
+	push SCORE_COL
+	mov ax, [pacmanX]
+	call printAxDec
+
+	push SCORE_ROW - 3
+	push SCORE_COL
+	mov ax, [pacmanY]
+	call printAxDec
 
  	 mov ah, 0
  	 int 16h
