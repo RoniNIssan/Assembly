@@ -326,7 +326,7 @@ Col_Check:
 	 pop ax
      pop bp
 
-	 ret 4
+	 ret 8
 
 endp isInRange
 

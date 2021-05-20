@@ -1,6 +1,7 @@
 IDEAL
 MODEL small
 STACK 100h
+p186
 
 
 FILENAME_GAME_DISPLAY equ 'Game.bmp'
@@ -152,19 +153,53 @@ MainLoop:
 
 	call ScoreDisplay
 
-	push SCORE_ROW - 2
-	push SCORE_COL
-	mov ax, [pacmanX]
-	call printAxDec
+	mov ax, 3h
+	int 33h
 
-	push SCORE_ROW - 3
-	push SCORE_COL
-	mov ax, [pacmanY]
-	call printAxDec
+	shr cx, 1
+	mov [MouseX], cx
+	mov [MouseY], dx
 
- 	 mov ah, 0
+	;push SCORE_ROW - 2
+	;push SCORE_COL
+	;mov ax, [MouseY]
+	;call printAxDec
+
+	;push SCORE_ROW - 3
+	;push SCORE_COL
+	;mov ax, [MouseX]
+	;call printAxDec
+
+	push QUIT_LEFT_COL
+	push QUIT_RIGHT_COL
+	push QUIT_TOP_ROW
+	push QUIT_BOTTOM_ROW
+	call isInRange
+
+	cmp [Bool], 1
+	jne continue
+
+	cmp bx, 1
+	je ExitShourtcut
+	jne continue
+
+MainLoopShortcut:
+		 jmp MainLoop
+
+continue:
+
+
+	 ;mov ah, 08
+	 ;int 21h
+ 	 mov ah, 1
  	 int 16h
 
+	 call delay
+
+	 jz MainLoopShortcut
+
+	 mov ah, 0
+	 int 16h
 	 cmp al, 'W'
 	 je North
 	 cmp al, 'w'
@@ -186,14 +221,14 @@ MainLoop:
 	 je WestShortcut
 
 
+	 jne MainLoopShortcut
+
 	 ;push	ds
 	 ;mov	ax,251Ch
 	 ;mov	dx,[timerOfs]
 	 ;mov	ds,[timerSeg]
 	 ;int	21h
 	 ;pop	ds
-
-	 jne MainLoop
 
 North:
 
@@ -218,7 +253,7 @@ North:
  push [pacmanY]
  call PacmanFigureDisplay
 
-	 jmp MainLoop
+	 jmp MainLoopShortcut
 
 WestShortcut:
 	 jmp West
@@ -226,7 +261,7 @@ WestShortcut:
 EastShortcut:
 	 jmp East
 ExitShourtcut:
-	jmp EXIT
+	 jmp EXIT
 South:
 
  push [pacmanX]
@@ -250,8 +285,8 @@ South:
  push [pacmanY]
  call PacmanFigureDisplay
 
-MainLoopShortcut:
-	 jmp MainLoop
+@@MainLoopShortcut:
+	 jmp MainLoopShortcut
 
 East:
 
@@ -387,10 +422,10 @@ endp ScoreDisplay
 ;Output:
 ;nextX value - stack
 ;=============================================
-currentX equ [bp + 6]
-currentY equ [bp + 4]
-nextX equ [bp - 8]
-normalizedY equ [bp - 10]
+currentX equ [word bp + 6]
+currentY equ [word bp + 4]
+nextX equ [word bp - 8]
+normalizedY equ [word bp - 10]
 
 proc FindNextAddedX_West
 
@@ -487,11 +522,11 @@ endp FindNextAddedX_West
 ;Output:
 ;nextX value - stack
 ;=============================================
-currentX equ [bp + 6]
-currentY equ [bp + 4]
-nextX equ [bp - 8]
-normalizedY equ [bp - 10]
-normalizedX equ [bp - 12]
+currentX equ [word bp + 6]
+currentY equ [word word bp + 4]
+nextX equ [word bp - 8]
+normalizedY equ [word bp - 10]
+normalizedX equ [word bp - 12]
 
 proc FindNextAddedX_East
 
@@ -687,10 +722,10 @@ endp FindNextAddedY_South
 ;Output:
 ;nextX value - stack
 ;=============================================
-currentY equ [bp + 6]
-currentX equ [bp + 4]
-nextY equ [bp - 8]
-normalizedX equ [bp - 10]
+currentY equ [word bp + 6]
+currentX equ [word bp + 4]
+nextY equ [word bp - 8]
+normalizedX equ [word bp - 10]
 
 proc FindNextAddedY_North
 
@@ -775,10 +810,10 @@ endp FindNextAddedY_North
 ;Output:
 ;score - global varible
 ;=============================================
-currentX equ [bp + 6]
-currentY equ [bp + 4]
-nextX equ [bp - 8]
-normalizedY equ [bp - 10]
+currentX equ [word bp + 6]
+currentY equ [word bp + 4]
+nextX equ [word bp - 8]
+normalizedY equ [word bp - 10]
 
 proc AddScore_West
 
@@ -851,11 +886,11 @@ endp AddScore_West
 ;Output:
 ;score - global varible
 ;=============================================
-currentX equ [bp + 6]
-currentY equ [bp + 4]
-nextX equ [bp - 8]
-normalizedY equ [bp - 10]
-normalizedX equ [bp - 12]
+currentX equ [word bp + 6]
+currentY equ [word bp + 4]
+nextX equ [word bp - 8]
+normalizedY equ [word bp - 10]
+normalizedX equ [word bp - 12]
 
 proc AddScore_East
 
@@ -935,11 +970,11 @@ endp AddScore_East
 ;Output:
 ;score - global varible
 ;=============================================
-currentY equ [bp + 6]
-currentX equ [bp + 4]
-nextY equ [bp - 8]
-normalizedX equ [bp - 10]
-normalizedY equ [bp - 12]
+currentY equ [word bp + 6]
+currentX equ [word bp + 4]
+nextY equ [word bp - 8]
+normalizedX equ [word bp - 10]
+normalizedY equ [word bp - 12]
 
 proc AddScore_South
 
@@ -1015,10 +1050,10 @@ endp AddScore_South
 ;Output:
 ;score - global varible
 ;=============================================
-currentY equ [bp + 6]
-currentX equ [bp + 4]
-nextY equ [bp - 8]
-normalizedX equ [bp - 10]
+currentY equ [word bp + 6]
+currentX equ [word bp + 4]
+nextY equ [word bp - 8]
+normalizedX equ [word bp - 10]
 
 proc AddScore_North
 
@@ -1094,10 +1129,10 @@ endp AddScore_North
 ;=============================================
 
 ;Button values
-leftCol equ [bp + 10]
-rightCol equ [bp + 8]
-topRow equ [bp + 6]
-bottomRow equ [bp + 4]
+leftCol equ [word bp + 10]
+rightCol equ [word bp + 8]
+topRow equ [word bp + 6]
+bottomRow equ [word bp + 4]
 
 proc isInRange
 
@@ -1116,7 +1151,7 @@ Rows_Check:
    cmp ax, rightCol
 	 ja @@ExitProc
 
-     cmp ax, leftCol
+   cmp ax, leftCol
 	 jb @@ExitProc
 
 Col_Check:
@@ -1137,7 +1172,7 @@ Col_Check:
 	 pop ax
      pop bp
 
-	 ret 4
+	 ret 8
 
 endp isInRange
 
@@ -1154,8 +1189,8 @@ endp isInRange
 ;Output:
 ;screen
 ;=============================================
-currentX equ [bp + 6]
-currentY equ [bp + 4]
+currentX equ [word bp + 6]
+currentY equ [word bp + 4]
 
 proc removePacman
 
@@ -1209,9 +1244,9 @@ endp removePacman
 ;screen
 ;=============================================
 
-	dirction equ [bp + 8]
-	xPos equ [bp + 6]
-	yPos equ [bp + 4]
+	dirction equ [word bp + 8]
+	xPos equ [word bp + 6]
+	yPos equ [word bp + 4]
 
 proc PacmanFigureDisplay
 
@@ -1223,7 +1258,7 @@ proc PacmanFigureDisplay
 
 
 @@North:
-
+; HI RONI
  mov ax, dirction
 	 cmp ax, 'W'
 	 jne @@South
@@ -1297,6 +1332,21 @@ endp setPacmanCurrentPoint
 
 
 ;============================================================================================
+
+
+proc delay
+
+	pusha
+	mov cx, 1
+	mov dx, 0E848h
+	mov al, 0
+	mov ah, 86h
+	int 15h
+	popa
+
+	ret
+endp delay
+
 ;=======================
 ;Put bmp file on screen
 ;======================
