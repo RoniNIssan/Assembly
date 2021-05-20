@@ -160,16 +160,6 @@ MainLoop:
 	mov [MouseX], cx
 	mov [MouseY], dx
 
-	;push SCORE_ROW - 2
-	;push SCORE_COL
-	;mov ax, [MouseY]
-	;call printAxDec
-
-	;push SCORE_ROW - 3
-	;push SCORE_COL
-	;mov ax, [MouseX]
-	;call printAxDec
-
 	push QUIT_LEFT_COL
 	push QUIT_RIGHT_COL
 	push QUIT_TOP_ROW
@@ -188,18 +178,14 @@ MainLoopShortcut:
 
 continue:
 
-
-	 ;mov ah, 08
-	 ;int 21h
  	 mov ah, 1
  	 int 16h
-
-	 call delay
 
 	 jz MainLoopShortcut
 
 	 mov ah, 0
 	 int 16h
+
 	 cmp al, 'W'
 	 je North
 	 cmp al, 'w'
