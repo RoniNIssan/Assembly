@@ -9,6 +9,10 @@ FILENAME_PLAY equ 'Play.bmp'
 FILENAME_LB equ 'lb.bmp'
 FILENAME_INST equ 'Inst.bmp'
 FILENAME_NA equ 'NA.bmp'
+FILENAME_INST_1 equ '1.bmp'
+FILENAME_INST_2 equ '2.bmp'
+FILENAME_INST_3 equ '3.bmp'
+FILENAME_INST_4 equ '4.bmp'
 
 FILE_ROWS = 200
 FILE_COLS = 320
@@ -38,6 +42,18 @@ QUIT_LEFT_COL_OPEN = 10
 QUIT_TOP_ROW_OPEN = 6
 QUIT_BOTTOM_ROW_OPEN = 31
 
+;Arrow forward
+ARROW_FORWARD_TOP_ROW = 183
+ARROW_FORWARD_LEFT_COL = 177
+ARROW_FORWARD_RIGHT_COL = 195
+ARROW_FORWARD_BOTTOM_ROW = 198
+
+;Arrow backward
+ARROW_BACKWARD_TOP_ROW = 183
+ARROW_BACKWARD_LEFT_COL = 144
+ARROW_BACKWARD_RIGHT_COL = 160
+ARROW_BACKWARD_BOTTOM_ROW = 193
+
 DATASEG
 
 
@@ -48,6 +64,11 @@ DATASEG
 	Filename_LbButton db FILENAME_LB, 0
 	Filename_Inst_button db FILENAME_INST, 0
 	Filename_NA_Dis db FILENAME_NA, 0
+	Filename_FirstInst db FILENAME_INST_1, 0
+	Filename_SecondInst db FILENAME_INST_2, 0
+	Filename_ThirdInst db FILENAME_INST_3, 0
+	Filename_FourthInst db FILENAME_INST_4, 0
+
 	ScrLine 	db FILE_COLS dup (0)  ; One Color line read buffer
 
 	FileHandle	dw ?
@@ -91,7 +112,7 @@ start:
 ;		Openning Scrren
 
  call stratGraphicMode
- call StratScreen
+ call StratScreen_OPEN
 
  call OpenScreen
 
@@ -101,7 +122,12 @@ EXIT:
  mov ax, 4C00h ; returns control to dos
 	 int 21h
 
-
+;=============================================
+;Open screen graphics
+;--------------------------------------------
+;Output:
+;via global bool varibles about turned buttons
+;=============================================
 proc OpenScreen
 
 mov ax,0h
@@ -201,8 +227,6 @@ CheckStatusShourtcut:
 jmp CheckStatus
 
 LbClick:
-mov [lb], 1
-
 mov ax, 2
 int 33h
 
@@ -252,7 +276,7 @@ mov ax, 2
 int 33h
 
 mov [isButtonOn], 0
-	call StratScreen
+call StratScreen_OPEN
 
 mov ax,1h
 int 33h
@@ -260,16 +284,13 @@ int 33h
 jmp CheckStatus
 
 InstClick:
-mov [inst], 1
+;mov ax, 2
+;int 33h
 
-mov ax, 2
-int 33h
+	call GameInstructionsPages
 
-call NADisplay
-call ToWait
-
-mov ax, 1
-int 33h
+;mov ax, 1
+;int 33h
 call InstButtonDisplay
 jmp CheckStatusShourtcut
 
@@ -278,6 +299,163 @@ jmp CheckStatusShourtcut
 ret
 
 endp OpenScreen
+
+
+
+
+count equ [word bp - 2]
+proc GameInstructionsPages
+
+	jmp FirstPage
+	push bp
+	mov bp, sp
+
+	mov count, 0
+
+InstructionsLoop:
+
+	;call ToWait
+
+	mov ax, 3h
+	int 33h
+
+	shr cx, 1
+	mov [MouseX], cx
+	mov [MouseY], dx
+
+	push QUIT_LEFT_COL_OPEN
+	push QUIT_RIGHT_COL_OPEN
+	push QUIT_TOP_ROW_OPEN
+	push QUIT_BOTTOM_ROW_OPEN
+	call isInRange
+
+	cmp [Bool], 1
+	jne NextPage
+
+	cmp bx, 1
+	je @@ExitShourtcut
+
+NextPage:
+
+	push ARROW_FORWARD_LEFT_COL
+	push ARROW_FORWARD_RIGHT_COL
+	push ARROW_FORWARD_TOP_ROW
+	push ARROW_FORWARD_BOTTOM_ROW
+	call isInRange
+
+	cmp [Bool], 1
+	jne BackPage
+
+	cmp bx, 1
+	jne BackPage
+
+	inc count
+	jmp CheckCount
+
+BackPage:
+	push ARROW_BACKWARD_LEFT_COL
+	push ARROW_BACKWARD_RIGHT_COL
+	push ARROW_BACKWARD_TOP_ROW
+	push ARROW_BACKWARD_BOTTOM_ROW
+	call isInRange
+
+	cmp [Bool], 1
+	jne InstructionsLoopShortcut
+
+	cmp bx, 1
+	je InstructionsLoopShortcut
+
+	dec count
+	jmp CheckCount
+
+InstructionsLoopShortcut:
+	jmp InstructionsLoop
+@@ExitShourtcut:
+	jmp @@ExitProc
+	
+FirstPage:
+
+	mov ax, 2h
+	int 33h
+
+	mov dx, offset Filename_FirstInst
+	call ShortBmp
+
+	mov ax, 1h
+	int 33h
+	jmp InstructionsLoopShortcut
+
+SecondPage:
+	mov ax, 2h
+	int 33h
+
+	mov dx, offset Filename_SecondInst
+	call ShortBmp
+
+	mov ax, 1h
+	int 33h
+
+	jmp InstructionsLoopShortcut
+
+ThirdPage:
+
+	mov ax, 2h
+	int 33h
+
+	mov dx, offset Filename_ThirdInst
+	call ShortBmp
+
+
+	mov ax, 1h
+	int 33h
+
+	jmp InstructionsLoopShortcut
+
+FourthPage:
+	mov ax, 2h
+	int 33h
+
+	mov dx, offset Filename_FourthInst
+	call ShortBmp
+
+	mov ax, 1h
+	int 33h
+
+	jmp InstructionsLoopShortcut
+
+CheckCount:
+
+	cmp count, 1
+	je FirstPage
+	cmp count, 2
+	je SecondPage
+	cmp count, 3
+	je ThirdPage
+	cmp count, 4
+	je FourthPage
+	jne InstructionsLoopShortcut
+
+@@ExitProc:
+
+		add sp, 2
+		pop bp
+
+		ret
+
+endp GameInstructionsPages
+
+proc ShortBmp
+
+	mov [BmpLeft],0 ;start point
+	mov [BmpTop],0
+	mov [BmpColSize], FILE_COLS
+	mov [BmpRowSize] ,FILE_ROWS
+	call OpenShowBmp
+	ret
+
+	endp ShortBmp
+
+
 ;=============================================
 ;Check if quit button is pressed
 ;--------------------------------------------
@@ -365,7 +543,7 @@ endp isInRange
 ;======================
 ;start screen dispaly
 ;=====================
-proc StratScreen
+proc StratScreen_OPEN
 
 	 mov dx, offset Filename_StartScreen
 	 mov [BmpLeft],0 ;start point
@@ -376,7 +554,7 @@ proc StratScreen
 
 	 ret
 
-endp StratScreen
+endp StratScreen_OPEN
 
 ;==================================
 ;play button colored screen dispaly

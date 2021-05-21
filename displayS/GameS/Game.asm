@@ -139,21 +139,31 @@ start:
  call Game
 
 EXIT:
-	push	ds
-	mov	ax,251Ch
-	mov	dx,[timerOfs]
-	mov	ds,[timerSeg]
-	int	21h
-	pop	ds
 
+	call EndTimer
 	call finishGraphicMode
+
+	;mov ax, 4C00h ; returns control to dos
+ 	;int 21h
+
 	mov	ah,04Ch
 	mov	al,[exitCode1]
 	int 21h
 
 
 
+proc EndTimer
 
+push	ds
+mov	ax,251Ch
+mov	dx,[timerOfs]
+mov	ds,[timerSeg]
+int	21h
+pop	ds
+
+ret
+
+endp EndTimer
 
 proc Game
 
