@@ -1,4 +1,4 @@
-	IDEAL
+IDEAL
 MODEL small
 STACK 100h
 
@@ -7,8 +7,8 @@ STACK 100h
 FILENAME_SCREEN equ 'Screen.bmp'
 FILENAME_PLAY equ 'Play.bmp'
 FILENAME_LB equ 'lb.bmp'
-FILENAME_Inst equ 'Inst.bmp'
-
+FILENAME_INST equ 'Inst.bmp'
+FILENAME_NA equ 'NA.bmp'
 
 FILE_ROWS = 200
 FILE_COLS = 320
@@ -33,220 +33,251 @@ INST_TOP_ROW = 96
 INST_BOTTOM_ROW = 107
 
 ;Quit Banner values
-QUIT_RIGHT_COL = 34
-QUIT_LEFT_COL = 10
-QUIT_TOP_ROW = 6
-QUIT_BOTTOM_ROW = 31
+QUIT_RIGHT_COL_OPEN = 34
+QUIT_LEFT_COL_OPEN = 10
+QUIT_TOP_ROW_OPEN = 6
+QUIT_BOTTOM_ROW_OPEN = 31
 
 DATASEG
 
 
 
 
-		Filename_StartScreen db FILENAME_SCREEN, 0
-		Filename_PlayButton db FILENAME_PLAY, 0
-		Filename_LbButton db FILENAME_LB, 0
-		Filename_InstButton db FILENAME_Inst, 0
-		ScrLine 	db FILE_COLS dup (0)  ; One Color line read buffer
+	Filename_StartScreen db FILENAME_SCREEN, 0
+	Filename_PlayButton db FILENAME_PLAY, 0
+	Filename_LbButton db FILENAME_LB, 0
+	Filename_Inst_button db FILENAME_INST, 0
+	Filename_NA_Dis db FILENAME_NA, 0
+	ScrLine 	db FILE_COLS dup (0)  ; One Color line read buffer
 
-		FileHandle	dw ?
-		Header 	    db 54 dup(0)
-		Palette 	db 400h dup (0)
+	FileHandle	dw ?
+	Header 	    db 54 dup(0)
+	Palette 	db 400h dup (0)
 
-		BmpFileErrorMsg    	db 'Error At Opening Bmp File ',FILENAME_SCREEN, 0dh, 0ah,'$'
-		ErrorFile           db 0
+	BmpFileErrorMsg    	db 'Error At Opening Bmp File ',FILENAME_SCREEN, 0dh, 0ah,'$'
+	ErrorFile           db 0
 
-		BmpLeft dw ?
-		BmpTop dw ?
-		BmpColSize dw ?
-		BmpRowSize dw ?
+	BmpLeft dw ?
+	BmpTop dw ?
+	BmpColSize dw ?
+	BmpRowSize dw ?
 
-		matrix dw ?
+	matrix dw ?
 
-        ;Mouse Varibles
-        MouseX dw ?
-        MouseY dw ?
+			;Mouse Varibles
+			MouseX dw ?
+			MouseY dw ?
 
-		;Boolean
-		Bool db 0
-		isButtonOn db 0
+	;Boolean
+	Bool db 0
+	isButtonOn db 0
 
-		;Buttons on
-		play db 0
-		Lb db 0
-		inst db 0
+	;Buttons on
+	play db 0
+	Lb db 0
+	inst db 0
 
 
 CODESEG
 
-    ORG 100h
+	ORG 100h
 
 start:
-	 mov ax, @data
-	 mov ds,ax
+ mov ax, @data
+ mov ds,ax
 
 
 ;========TEXT MODE========
 ;		Openning Scrren
 
-	 call stratGraphicMode
-     call StratScreen
+ call stratGraphicMode
+ call StratScreen
 
-	 mov ax,0h
-	 int 33h
+ call OpenScreen
 
-	 mov ax,1h
-	 int 33h
+EXIT:
+
+ call finishGraphicMode
+ mov ax, 4C00h ; returns control to dos
+	 int 21h
+
+
+proc OpenScreen
+
+mov ax,0h
+int 33h
+
+mov ax,1h
+int 33h
 
 CheckStatus:
 
 
-   mov ax, 3h
-	 int 33h
+mov ax, 3h
+int 33h
 
-	 shr cx, 1
-	 mov [MouseX], cx
-	 mov [MouseY], dx
+shr cx, 1
+mov [MouseX], cx
+mov [MouseY], dx
 
 
-	 push QUIT_LEFT_COL
-	 push QUIT_RIGHT_COL
-	 push QUIT_TOP_ROW
-	 push QUIT_BOTTOM_ROW
-	 call isInRange
+push QUIT_LEFT_COL_OPEN
+push QUIT_RIGHT_COL_OPEN
+push QUIT_TOP_ROW_OPEN
+push QUIT_BOTTOM_ROW_OPEN
+call isInRange
 
-	 cmp [Bool], 1
-	 jne PlayBanner
+cmp [Bool], 1
+jne PlayBanner
 
-	 cmp bx, 1
-	 je ExitShourtcut
+cmp bx, 1
+je ExitShourtcut
 
 
 PlayBanner:
 
-	 push PLAY_LEFT_COL
-	 push PLAY_RIGHT_COL
-	 push PLAY_TOP_ROW
-	 push PLAY_BOTTOM_ROW
-	 call isInRange
+push PLAY_LEFT_COL
+push PLAY_RIGHT_COL
+push PLAY_TOP_ROW
+push PLAY_BOTTOM_ROW
+call isInRange
 
-	 cmp [Bool], 1
-	 jne LeaderBoardBanner
+cmp [Bool], 1
+jne LeaderBoardBanner
 
-	 cmp bx, 1
-	 je PlayClick
+cmp bx, 1
+je PlayClick
 
-	 cmp [isButtonOn], 1
-	 je CheckStatusShourtcut
+cmp [isButtonOn], 1
+je CheckStatusShourtcut
 
-	 mov ax, 2
-	 int 33h
+mov ax, 2
+int 33h
 
-	 mov [isButtonOn], 1
-	 call PlayButtonDisplay
+mov [isButtonOn], 1
+call PlayButtonDisplay
 
-	 mov ax,1h
-	 int 33h
+mov ax,1h
+int 33h
 
-	 jmp CheckStatus
+jmp CheckStatus
 
 PlayClick:
-	 mov [play], 1
+mov [play], 1
 
 ExitShourtcut:
-	 jmp EXIT
+jmp @@ExitProc
 
 
 LeaderBoardBanner:
 
-	 push LB_LEFT_COL
-	 push LB_RIGHT_COL
-	 push LB_TOP_ROW
-	 push LB_BOTTOM_ROW
-	 call isInRange
+push LB_LEFT_COL
+push LB_RIGHT_COL
+push LB_TOP_ROW
+push LB_BOTTOM_ROW
+call isInRange
 
-	 cmp [Bool], 1
-	 jne GameInstructionsBanner
+cmp [Bool], 1
+jne GameInstructionsBanner
 
-	 cmp bx, 1
-	 je LbClick
+cmp bx, 1
+je LbClick
 
-	 cmp [isButtonOn], 1
-	 je CheckStatusShourtcut
+cmp [isButtonOn], 1
+je CheckStatusShourtcut
 
-	 mov ax, 2
-	 int 33h
+mov ax, 2
+int 33h
 
-	 mov [isButtonOn], 1
-	 call LbButtonDisplay
+mov [isButtonOn], 1
+call LbButtonDisplay
 
-	 mov ax,1h
-	 int 33h
+mov ax,1h
+int 33h
 
-	 jmp CheckStatus
+jmp CheckStatus
 
 CheckStatusShourtcut:
-	 jmp CheckStatus
+jmp CheckStatus
 
 LbClick:
-	 mov [lb], 1
-	 jmp EXIT
+mov [lb], 1
+
+mov ax, 2
+int 33h
+
+call NADisplay
+call ToWait
+
+mov ax, 1
+int 33h
+call LbButtonDisplay
+jmp CheckStatusShourtcut
 
 GameInstructionsBanner:
 
-	 push INST_LEFT_COL
-	 push INST_RIGHT_COL
-	 push INST_TOP_ROW
-	 push INST_BOTTOM_ROW
-	 call isInRange
+push INST_LEFT_COL
+push INST_RIGHT_COL
+push INST_TOP_ROW
+push INST_BOTTOM_ROW
+call isInRange
 
 
-	 cmp [Bool], 1
-	 jne @@CleanScreen
+cmp [Bool], 1
+jne @@CleanScreen
 
-	 cmp bx, 1
-	 je InstClick
+cmp bx, 1
+je InstClick
 
-	 cmp [isButtonOn], 1
-	 je CheckStatusShourtcut
+cmp [isButtonOn], 1
+je CheckStatusShourtcut
 
-	 mov ax, 2
-	 int 33h
+mov ax, 2
+int 33h
 
-	 mov [isButtonOn], 1
-	 call InstButtonDisplay
+mov [isButtonOn], 1
+call InstButtonDisplay
 
-	 mov ax,1h
-	 int 33h
+mov ax,1h
+int 33h
 
-	 jmp CheckStatus
+jmp CheckStatus
 
 @@CleanScreen:
 
-	 cmp [isButtonOn], 1
-	 jne CheckStatusShourtcut
+cmp [isButtonOn], 1
+jne CheckStatusShourtcut
 
-	 mov ax, 2
-	 int 33h
+mov ax, 2
+int 33h
 
-	 mov [isButtonOn], 0
-     call StratScreen
+mov [isButtonOn], 0
+	call StratScreen
 
- 	 mov ax,1h
-	 int 33h
+mov ax,1h
+int 33h
 
-	 jmp CheckStatus
+jmp CheckStatus
 
 InstClick:
-	 mov [inst], 1
+mov [inst], 1
 
-EXIT:
+mov ax, 2
+int 33h
 
-	 call finishGraphicMode
-	 mov ax, 4C00h ; returns control to dos
-  	 int 21h
+call NADisplay
+call ToWait
 
+mov ax, 1
+int 33h
+call InstButtonDisplay
+jmp CheckStatusShourtcut
 
+@@ExitProc:
+
+ret
+
+endp OpenScreen
 ;=============================================
 ;Check if quit button is pressed
 ;--------------------------------------------
@@ -255,13 +286,13 @@ EXIT:
 ;=============================================
 proc isQuitPressed
 
-	 push QUIT_LEFT_COL
-	 push QUIT_RIGHT_COL
-	 push QUIT_TOP_ROW
-	 push QUIT_BOTTOM_ROW
-	 call isInRange
+ push QUIT_LEFT_COL_OPEN
+ push QUIT_RIGHT_COL_OPEN
+ push QUIT_TOP_ROW_OPEN
+ push QUIT_BOTTOM_ROW_OPEN
+ call isInRange
 
-	 ret
+ ret
 
 endp isQuitPressed
 
@@ -290,43 +321,43 @@ bottomRow equ [bp + 4]
 
 proc isInRange
 
-	 push bp
-	 mov bp, sp
+ push bp
+ mov bp, sp
 
- 	 push ax
+ push ax
 
-	 mov [Bool], 0
+ mov [Bool], 0
 
 Rows_Check:
 
-     ;mouse pos bigger than button edge
-	 mov ax, [MouseX]
+	 ;mouse pos bigger than button edge
+ mov ax, [MouseX]
 
-     cmp ax, rightCol
-	 ja @@ExitProc
+	 cmp ax, rightCol
+ ja @@ExitProc
 
-     cmp ax, leftCol
-	 jb @@ExitProc
+	 cmp ax, leftCol
+ jb @@ExitProc
 
 Col_Check:
 
-	 mov ax, [MouseY]
+ mov ax, [MouseY]
 
-     cmp ax, topRow
-	 jb @@ExitProc
+	 cmp ax, topRow
+ jb @@ExitProc
 
-	 cmp ax, bottomRow
-	 ja @@ExitProc
+ cmp ax, bottomRow
+ ja @@ExitProc
 
-	 mov [Bool], 1
+ mov [Bool], 1
 
 
 @@ExitProc:
 
-	 pop ax
-     pop bp
+ pop ax
+	 pop bp
 
-	 ret 8
+ ret 8
 
 endp isInRange
 
@@ -336,14 +367,14 @@ endp isInRange
 ;=====================
 proc StratScreen
 
-     mov dx, offset Filename_StartScreen
-     mov [BmpLeft],0 ;start point
-     mov [BmpTop],0
-     mov [BmpColSize], FILE_COLS
-     mov [BmpRowSize] ,FILE_ROWS
-     call OpenShowBmp
+	 mov dx, offset Filename_StartScreen
+	 mov [BmpLeft],0 ;start point
+	 mov [BmpTop],0
+	 mov [BmpColSize], FILE_COLS
+	 mov [BmpRowSize] ,FILE_ROWS
+	 call OpenShowBmp
 
-     ret
+	 ret
 
 endp StratScreen
 
@@ -352,14 +383,14 @@ endp StratScreen
 ;==================================
 proc PlayButtonDisplay
 
-     mov dx, offset Filename_PlayButton
-     mov [BmpLeft],0 ;start point
-     mov [BmpTop],0
-     mov [BmpColSize], FILE_COLS
-     mov [BmpRowSize] ,FILE_ROWS
-     call OpenShowBmp
+	 mov dx, offset Filename_PlayButton
+	 mov [BmpLeft],0 ;start point
+	 mov [BmpTop],0
+	 mov [BmpColSize], FILE_COLS
+	 mov [BmpRowSize] ,FILE_ROWS
+	 call OpenShowBmp
 
-     ret
+	 ret
 
 endp PlayButtonDisplay
 
@@ -368,14 +399,14 @@ endp PlayButtonDisplay
 ;=========================================
 proc LbButtonDisplay
 
-     mov dx, offset Filename_LbButton
-     mov [BmpLeft],0 ;start point
-     mov [BmpTop],0
-     mov [BmpColSize], FILE_COLS
-     mov [BmpRowSize] ,FILE_ROWS
-     call OpenShowBmp
+	 mov dx, offset Filename_LbButton
+	 mov [BmpLeft],0 ;start point
+	 mov [BmpTop],0
+	 mov [BmpColSize], FILE_COLS
+	 mov [BmpRowSize] ,FILE_ROWS
+	 call OpenShowBmp
 
-	 ret
+ ret
 
 endp LbButtonDisplay
 
@@ -384,40 +415,55 @@ endp LbButtonDisplay
 ;===============================================
 proc InstButtonDisplay
 
-     mov dx, offset Filename_InstButton
-     mov [BmpLeft],0 ;start point
-     mov [BmpTop],0
-     mov [BmpColSize], FILE_COLS
-     mov [BmpRowSize] ,FILE_ROWS
-     call OpenShowBmp
+	 mov dx, offset Filename_Inst_button
+	 mov [BmpLeft],0 ;start point
+	 mov [BmpTop],0
+	 mov [BmpColSize], FILE_COLS
+	 mov [BmpRowSize] ,FILE_ROWS
+	 call OpenShowBmp
 
-	 ret
+ ret
 
 endp InstButtonDisplay
+;===============================================
+;Game instructions button colored screen dispaly
+;===============================================
+proc NADisplay
+
+	 mov dx, offset Filename_NA_Dis
+	 mov [BmpLeft],0 ;start point
+	 mov [BmpTop],0
+	 mov [BmpColSize], FILE_COLS
+	 mov [BmpRowSize] ,FILE_ROWS
+	 call OpenShowBmp
+
+ ret
+
+endp NADisplay
 ;============================================================================================
 ;=======================
 ;Put bmp file on screen
 ;======================
- proc OpenShowBmp near
+proc OpenShowBmp near
 
 
-	call OpenBmpFile
-	cmp [ErrorFile],1
-	je @@ExitProc
+call OpenBmpFile
+cmp [ErrorFile],1
+je @@ExitProc
 
-	call ReadBmpHeader
+call ReadBmpHeader
 
-	call ReadBmpPalette
+call ReadBmpPalette
 
-	call CopyBmpPalette
+call CopyBmpPalette
 
-	call  ShowBMP
+call  ShowBMP
 
 
-	call CloseBmpFile
+call CloseBmpFile
 
 @@ExitProc:
-	ret
+ret
 endp OpenShowBmp
 
 
@@ -425,59 +471,59 @@ endp OpenShowBmp
 
 ; input dx filename to open
 proc OpenBmpFile	near
-	mov ah, 3Dh
-	xor al, al
-	int 21h
-	jc @@ErrorAtOpen
-	mov [FileHandle], ax
-	jmp @@ExitProc
+mov ah, 3Dh
+xor al, al
+int 21h
+jc @@ErrorAtOpen
+mov [FileHandle], ax
+jmp @@ExitProc
 
 @@ErrorAtOpen:
-	mov [ErrorFile],1
+mov [ErrorFile],1
 @@ExitProc:
-	ret
+ret
 endp OpenBmpFile
 
 
 proc CloseBmpFile near
-	mov ah,3Eh
-	mov bx, [FileHandle]
-	int 21h
-	ret
+mov ah,3Eh
+mov bx, [FileHandle]
+int 21h
+ret
 endp CloseBmpFile
 
 
 ; Read 54 bytes the Header
 proc ReadBmpHeader	near
-	push cx
-	push dx
+push cx
+push dx
 
-	mov ah,3fh
-	mov bx, [FileHandle]
-	mov cx,54
-	mov dx,offset Header
-	int 21h
+mov ah,3fh
+mov bx, [FileHandle]
+mov cx,54
+mov dx,offset Header
+int 21h
 
-	pop dx
-	pop cx
-	ret
+pop dx
+pop cx
+ret
 endp ReadBmpHeader
 
 
 proc ReadBmpPalette near ; Read BMP file color palette, 256 colors * 4 bytes (400h)
-						 ; 4 bytes for each color BGR + null)
-	push cx
-	push dx
+					 ; 4 bytes for each color BGR + null)
+push cx
+push dx
 
-	mov ah,3fh
-	mov cx,400h
-	mov dx,offset Palette
-	int 21h
+mov ah,3fh
+mov cx,400h
+mov dx,offset Palette
+int 21h
 
-	pop dx
-	pop cx
+pop dx
+pop cx
 
-	ret
+ret
 endp ReadBmpPalette
 ;===============================================
 ; Will move out to screen memory the colors
@@ -486,33 +532,33 @@ endp ReadBmpPalette
 ;==============================================
 proc CopyBmpPalette		near
 
-	push cx
-	push dx
+push cx
+push dx
 
-	mov si,offset Palette
-	mov cx,256
-	mov dx,3C8h
-	mov al,0  ; black first
-	out dx,al ;3C8h
-	inc dx	  ;3C9h
+mov si,offset Palette
+mov cx,256
+mov dx,3C8h
+mov al,0  ; black first
+out dx,al ;3C8h
+inc dx	  ;3C9h
 CopyNextColor:
-	mov al,[si+2] 		; Red
-	shr al,2 			; divide by 4 Max (cos max is 63 and we have here max 255 ) (loosing color resolution).
-	out dx,al
-	mov al,[si+1] 		; Green.
-	shr al,2
-	out dx,al
-	mov al,[si] 		; Blue.
-	shr al,2
-	out dx,al
-	add si,4 			; Point to next color.  (4 bytes for each color BGR + null)
+mov al,[si+2] 		; Red
+shr al,2 			; divide by 4 Max (cos max is 63 and we have here max 255 ) (loosing color resolution).
+out dx,al
+mov al,[si+1] 		; Green.
+shr al,2
+out dx,al
+mov al,[si] 		; Blue.
+shr al,2
+out dx,al
+add si,4 			; Point to next color.  (4 bytes for each color BGR + null)
 
-	loop CopyNextColor
+loop CopyNextColor
 
-	pop dx
-	pop cx
+pop dx
+pop cx
 
-	ret
+ret
 endp CopyBmpPalette
 
 ;================================================
@@ -522,62 +568,62 @@ endp CopyBmpPalette
 ;================================================
 proc ShowBMP
 
-	push cx
+push cx
 
-	mov ax, 0A000h
-	mov es, ax
+mov ax, 0A000h
+mov es, ax
 
-	mov cx,[BmpRowSize]
+mov cx,[BmpRowSize]
 
 
-	mov ax,[BmpColSize] ; row size must dived by 4 so if it less we must calculate the extra padding bytes
-	xor dx,dx
-	mov si,4
-	div si
-	cmp dx,0
-	mov bp,0
-	jz @@row_ok
-	mov bp,4
-	sub bp,dx
+mov ax,[BmpColSize] ; row size must dived by 4 so if it less we must calculate the extra padding bytes
+xor dx,dx
+mov si,4
+div si
+cmp dx,0
+mov bp,0
+jz @@row_ok
+mov bp,4
+sub bp,dx
 
 @@row_ok:
-	mov dx,[BmpLeft]
+mov dx,[BmpLeft]
 
 @@NextLine:
-	push cx
-	push dx
+push cx
+push dx
 
-	mov di,cx  ; Current Row at the small bmp (each time -1)
-	add di,[BmpTop] ; add the Y on entire screen
+mov di,cx  ; Current Row at the small bmp (each time -1)
+add di,[BmpTop] ; add the Y on entire screen
 
 
-	; next 5 lines  di will be  = cx*320 + dx , point to the correct screen line
-	dec di
-	mov cx,di
-	shl cx,6
-	shl di,8
-	add di,cx
-	add di,dx
+; next 5 lines  di will be  = cx*320 + dx , point to the correct screen line
+dec di
+mov cx,di
+shl cx,6
+shl di,8
+add di,cx
+add di,dx
 
-	; small Read one line
-	mov ah,3fh
-	mov cx,[BmpColSize]
-	add cx,bp  ; extra  bytes to each row must be divided by 4
-	mov dx,offset ScrLine
-	int 21h
-	; Copy one line into video memory
-	cld ; Clear direction flag, for movsb
-	mov cx,[BmpColSize]
-	mov si,offset ScrLine
-	rep movsb ; Copy line to the screen
+; small Read one line
+mov ah,3fh
+mov cx,[BmpColSize]
+add cx,bp  ; extra  bytes to each row must be divided by 4
+mov dx,offset ScrLine
+int 21h
+; Copy one line into video memory
+cld ; Clear direction flag, for movsb
+mov cx,[BmpColSize]
+mov si,offset ScrLine
+rep movsb ; Copy line to the screen
 
-	pop dx
-	pop cx
+pop dx
+pop cx
 
-	loop @@NextLine
+loop @@NextLine
 
-	pop cx
-	ret
+pop cx
+ret
 endp ShowBMP
 
 
@@ -590,10 +636,10 @@ endp ShowBMP
 
 proc stratGraphicMode
 
-	 mov ax, 13h
-	 int 10h
+ mov ax, 13h
+ int 10h
 
-	 ret
+ ret
 
 endp stratGraphicMode
 
@@ -606,11 +652,11 @@ endp stratGraphicMode
 
 proc finishGraphicMode
 
-	 mov al, 3
-	 mov ah, 0
-	 int 10h
+ mov al, 3
+ mov ah, 0
+ int 10h
 
-	 ret
+ ret
 
 endp finishGraphicMode
 
@@ -623,11 +669,11 @@ endp finishGraphicMode
 
 proc ToWait
 
-	 mov cx, 0Fh
-	 mov dx, 4240
-	 mov ah, 86h
-	 int 15h
-	 ret
+ mov cx, 0Fh
+ mov dx, 4240
+ mov ah, 86h
+ int 15h
+ ret
 
 endp ToWait
 
@@ -639,25 +685,25 @@ endp ToWait
 ;================================================
 
 proc DrawHorizontalLine	near
-	push si
-	push cx
+push si
+push cx
 DrawLine:
-	cmp si,0
-	jz ExitDrawLine
+cmp si,0
+jz ExitDrawLine
 
-    mov ah,0ch
-	int 10h    ; put pixel
+	mov ah,0ch
+int 10h    ; put pixel
 
 
-	inc cx
-	dec si
-	jmp DrawLine
+inc cx
+dec si
+jmp DrawLine
 
 
 ExitDrawLine:
-	pop cx
-    pop si
-	ret
+pop cx
+	pop si
+ret
 endp DrawHorizontalLine
 
 
@@ -669,27 +715,27 @@ endp DrawHorizontalLine
 ;================================================
 
 proc DrawVerticalLine	near
-	push si
-	push dx
+push si
+push dx
 
 DrawVertical:
-	cmp si,0
-	jz ExitDrawLine
+cmp si,0
+jz ExitDrawLine
 
-    mov ah,0ch
-	int 10h    ; put pixel
+	mov ah,0ch
+int 10h    ; put pixel
 
 
 
-	inc dx
-	dec si
-	jmp DrawVertical
+inc dx
+dec si
+jmp DrawVertical
 
 
 @@ExitDrawLine:
-	pop dx
-    pop si
-	ret
+pop dx
+	pop si
+ret
 endp DrawVerticalLine
 
 

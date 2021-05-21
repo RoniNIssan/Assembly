@@ -1,7 +1,6 @@
 IDEAL
 MODEL small
 STACK 100h
-p186
 
 
 FILENAME_GAME_DISPLAY equ 'Game.bmp'
@@ -24,10 +23,10 @@ FILE_ROWS_PACMAN = 9
 FILE_COLS_PACMAN = 9
 
 ;Quit Banner values
-QUIT_RIGHT_COL = 313
-QUIT_LEFT_COL = 289
-QUIT_TOP_ROW = 9
-QUIT_BOTTOM_ROW = 33
+QUIT_RIGHT_COL_GAME = 313
+QUIT_LEFT_COL_GAME = 289
+QUIT_TOP_ROW_GAME = 9
+QUIT_BOTTOM_ROW_GAME = 33
 
 ;Pacman values
 MAZE_RIGHT_BOUNDARY_X = 167
@@ -53,14 +52,14 @@ LowTimer	EQU	006Ch
 PIC8259		EQU	0020h
 EOI		    EQU	0020h
 
-TIMEOUT = 90
+TIMEOUT = 10
 TIME_ROW = 46
-TIME_COL = 23
+TIME_COL = 20
 
 
 ;Score
 SCORE_ROW = 36
-SCORE_COL = 22
+SCORE_COL = 20
 SCORE_ADDED_POINTS = 10
 
 DATASEG
@@ -96,6 +95,9 @@ DATASEG
 
 	;Boolean
 	Bool db 0
+	ExitToMenu db 0
+	TimeIsUp db 0
+	ScoreUp db 0
 
 	;Timer
 	exitCode1	db	0
@@ -134,6 +136,26 @@ start:
 
  call stratGraphicMode
  call StratScreen
+ call Game
+
+EXIT:
+	push	ds
+	mov	ax,251Ch
+	mov	dx,[timerOfs]
+	mov	ds,[timerSeg]
+	int	21h
+	pop	ds
+
+	call finishGraphicMode
+	mov	ah,04Ch
+	mov	al,[exitCode1]
+	int 21h
+
+
+
+
+
+proc Game
 
  mov ax,0h
  int 33h
@@ -160,10 +182,10 @@ MainLoop:
 	mov [MouseX], cx
 	mov [MouseY], dx
 
-	push QUIT_LEFT_COL
-	push QUIT_RIGHT_COL
-	push QUIT_TOP_ROW
-	push QUIT_BOTTOM_ROW
+	push QUIT_LEFT_COL_GAME
+	push QUIT_RIGHT_COL_GAME
+	push QUIT_TOP_ROW_GAME
+	push QUIT_BOTTOM_ROW_GAME
 	call isInRange
 
 	cmp [Bool], 1
@@ -220,7 +242,7 @@ North:
 
  push [pacmanX]
  push [pacmanY]
-	 call removePacman
+ call removePacman
 
  mov [pacmanCurrentDirection], 'W'
 
@@ -239,7 +261,7 @@ North:
  push [pacmanY]
  call PacmanFigureDisplay
 
-	 jmp MainLoopShortcut
+ jmp MainLoopShortcut
 
 WestShortcut:
 	 jmp West
@@ -247,7 +269,9 @@ WestShortcut:
 EastShortcut:
 	 jmp East
 ExitShourtcut:
-	 jmp EXIT
+	mov [ExitToMenu], 1
+	jmp @@ExitProc
+
 South:
 
  push [pacmanX]
@@ -272,7 +296,7 @@ South:
  call PacmanFigureDisplay
 
 @@MainLoopShortcut:
-	 jmp MainLoopShortcut
+jmp MainLoopShortcut
 
 East:
 
@@ -303,7 +327,7 @@ West:
 
  push [pacmanX]
  push [pacmanY]
-	 call removePacman
+ call removePacman
 
  mov [pacmanCurrentDirection], 'A'
 
@@ -322,24 +346,14 @@ West:
  push [pacmanY]
  call PacmanFigureDisplay
 
-
-
  jmp MainLoopShortcut
 
-EXIT:
-	push	ds
-	mov	ax,251Ch
-	mov	dx,[timerOfs]
-	mov	ds,[timerSeg]
-	int	21h
-	pop	ds
-
-	call finishGraphicMode
-	mov	ah,04Ch
-	mov	al,[exitCode1]
-	int 21h
+@@ExitProc:
 
 
+	ret
+
+endp Game
 
 ;======================
 ;start screen dispaly
@@ -509,7 +523,7 @@ endp FindNextAddedX_West
 ;nextX value - stack
 ;=============================================
 currentX equ [word bp + 6]
-currentY equ [word word bp + 4]
+currentY equ [word bp + 4]
 nextX equ [word bp - 8]
 normalizedY equ [word bp - 10]
 normalizedX equ [word bp - 12]
@@ -615,11 +629,11 @@ endp FindNextAddedX_East
 ;Output:
 ;nextX value - stack
 ;=============================================
-currentY equ [bp + 6]
-currentX equ [bp + 4]
-nextY equ [bp - 8]
-normalizedX equ [bp - 10]
-normalizedY equ [bp - 12]
+currentY equ [word bp + 6]
+currentX equ [word bp + 4]
+nextY equ [word bp - 8]
+normalizedX equ [word bp - 10]
+normalizedY equ [word bp - 12]
 
 proc FindNextAddedY_South
 
@@ -1318,21 +1332,6 @@ endp setPacmanCurrentPoint
 
 
 ;============================================================================================
-
-
-proc delay
-
-	pusha
-	mov cx, 1
-	mov dx, 0E848h
-	mov al, 0
-	mov ah, 86h
-	int 15h
-	popa
-
-	ret
-endp delay
-
 ;=======================
 ;Put bmp file on screen
 ;======================
@@ -1566,59 +1565,61 @@ fixDrift    db  5
 counter     dw  0
 
 PROC	PrintSecondsElapse
-cmp	[byte cs:inProgress],0
-jne	@@99
-inc	[byte cs:inProgress]
-; this needs for the processor to be able
-	; recognizing again an external interrupt signals
-	sti
-push	ax
-push	ds
-push	dx
+	cmp	[byte cs:inProgress],0
+	jne	@@99
+	inc	[byte cs:inProgress]
+	; this needs for the processor to be able
+    ; recognizing again an external interrupt signals
+    sti
+	push	ax
+	push	ds
+	push	dx
 
-	; this needs to tell the 8259 chip tp pass the
-	; interrupts it receives along to the processor
-mov	al,EOI
-out	PIC8259,al
-mov	ax,BIOSData
-mov	ds,ax
+    ; this needs to tell the 8259 chip tp pass the
+    ; interrupts it receives along to the processor
+	mov	al,EOI
+	out	PIC8259,al
+	mov	ax,BIOSData
+	mov	ds,ax
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	; Y O U R    C O D E
-;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	mov	dx, [word LowTimer]     ; read the timmer
-	push dx                     ; save the timmer
-sub	dx,[cs:lastTimer]
-cmp	dx, [cs:difference]
-pop dx
-	jb	@@20
-	dec [cs:fixDrift]
-	jnz @@10
-	mov [cs:fixDrift], 5
-	inc dx
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ; Y O U R    C O D E
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    mov	dx, [word LowTimer]     ; read the timmer
+    push dx                     ; save the timmer
+	sub	dx,[cs:lastTimer]
+	cmp	dx, [cs:difference]
+	pop dx
+    jb	@@20
+    dec [cs:fixDrift]
+    jnz @@10
+    mov [cs:fixDrift], 5
+    inc dx
 @@10:
-	mov	[cs:lastTimer], dx
-	mov ax, [cs:counter]
-	cmp ax, TIMEOUT
-	ja @@TimeoutEnd
+    mov	[cs:lastTimer], dx
+    mov ax, [cs:counter]
+		cmp ax, TIMEOUT
+		ja @@TimeoutEnd
 
-	push TIME_ROW
-	push TIME_COL
-	call printAxDec
-	inc [cs:counter]
-	jmp @@20
+		push TIME_ROW
+		push TIME_COL
+    call printAxDec
+    inc [cs:counter]
+		jmp @@20
 @@TimeoutEnd:
-jmp EXIT
+	mov [TimeIsUp], 1
+  ;TODO: display Time is over
+	jmp EXIT
 
 @@20:
-cli
-dec	[byte cs:inProgress]
-pop	dx
-pop	ds
-pop	ax
+	cli
+	dec	[byte cs:inProgress]
+	pop	dx
+	pop	ds
+	pop	ax
 @@99:
-iret
+	iret
 ENDP	PrintSecondsElapse
 
 ;-----------------------------------------------------------------------
@@ -1629,70 +1630,69 @@ ENDP	PrintSecondsElapse
 ;		zf = 1 : (JZ) No character is waiting
 ;	Registers: none (flags only)
 ;-----------------------------------------------------------------------
-;cursor pos values
-col equ [bp + 4]
-row equ [bp + 6]
+	;cursor pos values
+	col equ [bp + 4]
+	row equ [bp + 6]
 
 PROC printAxDec
-	 push bp
-	 mov bp, sp
-	 push ax
-	 push bx
-	 push dx
-	 push cx
+		 push bp
+		 mov bp, sp
+	   push ax
+     push bx
+	   push dx
+	   push cx
 
-	 push ax
+		 push ax
 
-	 mov ax, col
-	 mov  dl, al   ;Column
-	 mov ax, row
-	 mov  dh, al   ;Row
-	 mov  bh, 0    ;Display page
-	 mov  ah, 02h  ;SetCursorPosition
-	 int  10h
+		 mov ax, col
+		 mov  dl, al   ;Column
+		 mov ax, row
+		 mov  dh, al   ;Row
+		 mov  bh, 0    ;Display page
+		 mov  ah, 02h  ;SetCursorPosition
+		 int  10h
 
-	 pop ax
-	 mov cx,0   ; will count how many time we did push
-	 mov bx,10  ; the divider
+		 pop ax
+     mov cx,0   ; will count how many time we did push
+     mov bx,10  ; the divider
 
 put_next_to_stack:
 
-		 xor dx,dx
-		 div bx
-		 add dl,30h
-	 ; dl is the current LSB digit
-	 ; we cant push only dl so we push all dx
-		 push dx
-		 inc cx
-		 cmp ax,9   ; check if it is the last time to div
-		 jg put_next_to_stack
+       xor dx,dx
+       div bx
+       add dl,30h
+	   ; dl is the current LSB digit
+	   ; we cant push only dl so we push all dx
+       push dx
+       inc cx
+       cmp ax,9   ; check if it is the last time to div
+       jg put_next_to_stack
 
-	 cmp ax,0
-	 jz pop_next_from_stack  ; jump if ax was totally 0
+	   cmp ax,0
+	   jz pop_next_from_stack  ; jump if ax was totally 0
 
-		 add al,30h
-	 mov dl, al
-		 mov ah, 2h
-	 int 21h        ; show first digit MSB
+       add al,30h
+	   mov dl, al
+  	   mov ah, 2h
+	   int 21h        ; show first digit MSB
 
 
 
 pop_next_from_stack:
 
-		 pop ax    ; remove all rest LIFO (reverse) (MSB to LSB)
-	 mov dl, al
-	 mov ah, 2h
-	 int 21h        ; show all rest digits
-		 loop pop_next_from_stack
+       pop ax    ; remove all rest LIFO (reverse) (MSB to LSB)
+	   mov dl, al
+     mov ah, 2h
+	   int 21h        ; show all rest digits
+       loop pop_next_from_stack
 
-	 pop cx
-	 pop dx
-	 pop bx
-	 pop ax
-	 pop bp
-	 ret 4
+	   pop cx
+	   pop dx
+	   pop bx
+	   pop ax
+		 pop bp
+     ret 4
 endp printAxDec
-
 ;================================================
 ; in dx how many cols
 ; in cx how many rows
