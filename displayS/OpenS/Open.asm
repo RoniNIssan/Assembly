@@ -29,7 +29,6 @@ LB_LEFT_COL = 92
 LB_TOP_ROW = 78
 LB_BOTTOM_ROW = 89
 
-
 ;Game instructions Banner values
 INST_RIGHT_COL = 270
 INST_LEFT_COL = 51
@@ -43,15 +42,15 @@ QUIT_TOP_ROW_OPEN = 6
 QUIT_BOTTOM_ROW_OPEN = 31
 
 ;Arrow forward
-ARROW_FORWARD_TOP_ROW = 183
-ARROW_FORWARD_LEFT_COL = 177
 ARROW_FORWARD_RIGHT_COL = 195
+ARROW_FORWARD_LEFT_COL = 177
+ARROW_FORWARD_TOP_ROW = 183
 ARROW_FORWARD_BOTTOM_ROW = 198
 
 ;Arrow backward
-ARROW_BACKWARD_TOP_ROW = 183
-ARROW_BACKWARD_LEFT_COL = 144
 ARROW_BACKWARD_RIGHT_COL = 160
+ARROW_BACKWARD_LEFT_COL = 144
+ARROW_BACKWARD_TOP_ROW = 183
 ARROW_BACKWARD_BOTTOM_ROW = 193
 
 DATASEG
@@ -145,7 +144,6 @@ int 33h
 shr cx, 1
 mov [MouseX], cx
 mov [MouseY], dx
-
 
 push QUIT_LEFT_COL_OPEN
 push QUIT_RIGHT_COL_OPEN
@@ -267,6 +265,13 @@ int 33h
 
 jmp CheckStatus
 
+
+InstClick:
+
+call GameInstructionsPages
+call InstButtonDisplay
+jmp CheckStatusShourtcut
+
 @@CleanScreen:
 
 cmp [isButtonOn], 1
@@ -282,18 +287,6 @@ mov ax,1h
 int 33h
 
 jmp CheckStatus
-
-InstClick:
-;mov ax, 2
-;int 33h
-
-	call GameInstructionsPages
-
-;mov ax, 1
-;int 33h
-call InstButtonDisplay
-jmp CheckStatusShourtcut
-
 @@ExitProc:
 
 ret
@@ -306,11 +299,13 @@ endp OpenScreen
 count equ [word bp - 2]
 proc GameInstructionsPages
 
-	jmp FirstPage
 	push bp
 	mov bp, sp
 
+	sub sp, 2
+
 	mov count, 0
+	jmp FirstPage
 
 InstructionsLoop:
 
@@ -347,11 +342,15 @@ NextPage:
 	jne BackPage
 
 	cmp bx, 1
-	jne BackPage
+	jne InstructionsLoop
 
+	cmp count, 4
+	je InstructionsLoopShortcut
 	inc count
 	jmp CheckCount
 
+@@ExitShourtcut:
+	jmp @@ExitProc
 BackPage:
 	push ARROW_BACKWARD_LEFT_COL
 	push ARROW_BACKWARD_RIGHT_COL
@@ -363,16 +362,29 @@ BackPage:
 	jne InstructionsLoopShortcut
 
 	cmp bx, 1
+	jne InstructionsLoopShortcut
+
+	cmp count, 0
 	je InstructionsLoopShortcut
 
 	dec count
+
 	jmp CheckCount
 
 InstructionsLoopShortcut:
 	jmp InstructionsLoop
-@@ExitShourtcut:
-	jmp @@ExitProc
-	
+
+CheckCount:
+	cmp count, 1
+	je FirstPage
+	cmp count, 2
+	je SecondPage
+	cmp count, 3
+	je ThirdPage
+	cmp count, 4
+	je FourthPage
+	jne InstructionsLoopShortcut
+
 FirstPage:
 
 	mov ax, 2h
@@ -423,17 +435,6 @@ FourthPage:
 
 	jmp InstructionsLoopShortcut
 
-CheckCount:
-
-	cmp count, 1
-	je FirstPage
-	cmp count, 2
-	je SecondPage
-	cmp count, 3
-	je ThirdPage
-	cmp count, 4
-	je FourthPage
-	jne InstructionsLoopShortcut
 
 @@ExitProc:
 
