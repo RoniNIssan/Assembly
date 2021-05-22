@@ -8,6 +8,8 @@ FILENAME_PACMAN_NORTH equ 'PN.bmp'
 FILENAME_PACMAN_SOUTH equ 'PS.bmp'
 FILENAME_PACMAN_EAST equ 'PE.bmp'
 FILENAME_PACMAN_WEST equ 'PW.bmp'
+FILENAME_WIN equ 'win.bmp'
+FILENAME_LOOSE equ 'loose.bmp'
 
 ;Maze
 FILE_ROWS_MAZE = 200
@@ -52,7 +54,7 @@ LowTimer	EQU	006Ch
 PIC8259		EQU	0020h
 EOI		    EQU	0020h
 
-TIMEOUT = 10
+TIMEOUT = 90
 TIME_ROW = 46
 TIME_COL = 20
 
@@ -70,6 +72,8 @@ DATASEG
 	Filename_PacmanSouth db FILENAME_PACMAN_SOUTH, 0
 	Filename_PacmanEast db FILENAME_PACMAN_EAST, 0
 	Filename_PacmanWest db FILENAME_PACMAN_WEST, 0
+	Filename_Game_Win db Filename_Win, 0
+	Filename_Game_Loose db FILENAME_LOOSE, 0
 	ScrLine db FILE_COLS_MAZE dup (0)  ; One Color line read buffer
 
 	FileHandle	dw ?
@@ -143,12 +147,12 @@ EXIT:
 	call EndTimer
 	call finishGraphicMode
 
-	;mov ax, 4C00h ; returns control to dos
- 	;int 21h
+	mov ax, 4C00h ; returns control to dos
+ 	int 21h
 
-	mov	ah,04Ch
-	mov	al,[exitCode1]
-	int 21h
+	;mov	ah,04Ch
+	;mov	al,[exitCode1]
+	;int 21h
 
 
 
@@ -209,6 +213,12 @@ MainLoopShortcut:
 		 jmp MainLoop
 
 continue:
+
+	push [pacmanY]
+	push [pacmanX]
+	call CheckWin
+	cmp [Bool],1
+	je WinShortcut
 
  	 mov ah, 1
  	 int 16h
@@ -273,14 +283,16 @@ North:
 
  jmp MainLoopShortcut
 
+ExitShourtcut:
+ ;mov [ExitToMenu], 1
+ jmp @@ExitProc
+WinShortcut:
+ jmp @@Win
 WestShortcut:
 	 jmp West
 
 EastShortcut:
 	 jmp East
-ExitShourtcut:
-	mov [ExitToMenu], 1
-	jmp @@ExitProc
 
 South:
 
@@ -332,7 +344,6 @@ East:
  call PacmanFigureDisplay
 
 	 jmp MainLoopShortcut
-
 West:
 
  push [pacmanX]
@@ -358,13 +369,119 @@ West:
 
  jmp MainLoopShortcut
 
-@@ExitProc:
+@@Win:
+	call WinDisplay
+	mov ah, 00
+	int 16h
 
+@@ExitProc:
 
 	ret
 
 endp Game
 
+;=============================================
+;Check win
+;--------------------------------------------
+;Input:
+;1- CurrentXPos
+;2- CurrentYPos
+;--------------------------------------------
+;Registers:
+;bp, cx, dx, ax
+;--------------------------------------------
+;Output:
+;Bool varible - > isWin [1 - true, 0- fale]
+;=============================================
+
+currentX equ [word bp + 4] ;left col
+currentY equ [word bp + 6] ;top row
+rightCol equ [word bp - 2]
+bottomRow equ [word bp - 4]
+
+i equ [word bp - 6]
+j equ [word bp - 8]
+proc CheckWin
+
+	push bp
+	mov bp, sp
+	sub sp, 8
+
+	mov [Bool], 0
+
+	mov ax, currentX
+	mov rightCol, FILE_COLS_PACMAN
+	add rightCol, ax
+
+	mov ax, currentY
+	mov bottomRow, FILE_ROWS_PACMAN
+	add bottomRow, ax
+
+	mov cx, 200
+
+Rows:
+
+	mov i, cx
+	mov cx, MAZE_RIGHT_EDGE_X
+	Cols:
+
+		mov j, cx
+
+		cmp cx, currentX
+		jb @@continue
+		cmp cx, rightCol
+		ja @@continue
+
+		mov dx, i
+		cmp currentY, dx
+		jb @@continue
+		cmp bottomRow, dx
+		ja @@continue
+
+		jmp Skip
+
+
+@@continue:
+		;cx already represents col [j]
+		mov dx, i
+		mov ah, 0dh
+		int 10h
+
+		cmp al, YELLOW_DOTS_COLOR_1
+		je @@ExitProc
+		cmp al, YELLOW_DOTS_COLOR_2
+		je @@ExitProc
+
+		Skip:
+
+		mov cx, j
+		loop Cols
+
+		mov cx,i
+	loop Rows
+
+	mov [Bool], 1
+
+@@ExitProc:
+
+	add sp, 8
+	pop bp
+
+	ret 4
+
+endp CheckWin
+
+proc WinDisplay
+mov dx, offset Filename_Game_Win
+mov [BmpLeft], 0
+mov [BmpTop],0
+mov [BmpColSize], FILE_COLS_MAZE
+mov [BmpRowSize] ,FILE_ROWS_MAZE
+call OpenShowBmp
+
+ret
+
+endp WinDisplay
 ;======================
 ;start screen dispaly
 ;=====================
