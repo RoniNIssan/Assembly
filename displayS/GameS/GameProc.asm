@@ -23,6 +23,7 @@ call hideMouse
 call StratScreen
 mov [pacmanX], START_POS_X
 mov [pacmanY], START_POS_Y
+mov [pacmanCurrentDirection], DEFAULT_DIRECTION
 
  mov ax,0h  ;initilaizing mouse
  int 33h

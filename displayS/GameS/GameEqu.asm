@@ -9,6 +9,7 @@ FILENAME_LOOSE equ 'loose.bmp'
 ;Paman
 START_POS_X = 86
 START_POS_Y = 146
+DEFAULT_DIRECTION = 'D'
 
 ;Maze
 FILE_ROWS_MAZE = 200
@@ -40,8 +41,8 @@ PACMAN_MIDDLE_X_PIXLE = (FILE_COLS_PACMAN - 1) / 2 + 1
 PACMAN_MIDDLE_Y_PIXLE_WEST = (FILE_ROWS_PACMAN - 1) / 2 + 1
 
 ;Needed when turn:
-DISTANCE_FROM_BOUNDARY_X = 2; when moving on Y - distanc1e between ghost and boundary
-DISTANCE_FROM_BOUNDARY_Y = 2; when moving on X - distance between ghost and boundary
+DISTANCE_FROM_BOUNDARY_X = 2; when moving on Y - distanc1e between pacman and boundary
+DISTANCE_FROM_BOUNDARY_Y = 2; when moving on X - distance between  pacman and boundary
 MAZE_RIGHT_EDGE_X = 172
 MAZE_LEFT_EDGE_X = 8
 

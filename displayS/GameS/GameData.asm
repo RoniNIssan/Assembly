@@ -30,8 +30,7 @@
 	startY dw 0
 	defaultX dw 0
 
-	currentPoint dw ?
-	pacmanCurrentDirection dw 'D'
+	pacmanCurrentDirection dw DEFAULT_DIRECTION
 
 	;Boolean
 	TimeIsUp db 0

@@ -33,12 +33,19 @@ Main:
  mov	[word cs:difference],ticks
 
  call Game ;game play display
+ call hideMouse
+ call GameOverDisplay
+ call Delay
+ call Delay
+ call ShowMouse
  jmp Main
 
- EXIT:
+EXIT:
 
-jmp Main
-
+;for future development of timer exit
+;call EndTimer
+;call Delay
+;jmp Main
 EXIT_END:
 
   call finishGraphicMode
