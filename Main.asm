@@ -20,28 +20,28 @@ CODESEG
 Start:
  mov ax, @data
  mov ds,ax
- mov	es,ax
- mov	[word cs:difference],ticks
 
 
  call stratGraphicMode
 
 Main:
-
  call OpenScreen ;open screen display
  cmp [Play], 1 ;check- exit by Play button?
- jne EXIT
+ jne EXIT_END
+
+ mov	es,ax
+ mov	[word cs:difference],ticks
+
  call Game ;game play display
- je Main
+ jmp Main
 
- ;cmp [TimeIsUp],1 ;
- ;je Main
+ EXIT:
 
+jmp Main
 
-EXIT:
+EXIT_END:
 
   call finishGraphicMode
-
   mov ax, 4C00h ; returns control to dos
   int 21h
 

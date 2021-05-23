@@ -3,7 +3,7 @@
 	Filename_PacmanSouth db FILENAME_PACMAN_SOUTH, 0
 	Filename_PacmanEast db FILENAME_PACMAN_EAST, 0
 	Filename_PacmanWest db FILENAME_PACMAN_WEST, 0
-	Filename_Game_Win db Filename_Win, 0
+	Filename_Game_Win db FILENAME_WIN, 0
 	Filename_Game_Loose db FILENAME_LOOSE, 0
 	ScrLine db FILE_COLS_MAZE dup (0)  ; One Color line read buffer
 
@@ -25,13 +25,17 @@
 	pacmanX dw START_POS_X
 	pacmanY dw START_POS_Y
 
+	;
+	startX dw 0
+	startY dw 0
+	defaultX dw 0
+
 	currentPoint dw ?
 	pacmanCurrentDirection dw 'D'
 
 	;Boolean
 	TimeIsUp db 0
-	ScoreUp db 0
-
+	isScoreExits db 0
 	;Timer
 	exitCode1	db	0
 	timerSeg	dw	?

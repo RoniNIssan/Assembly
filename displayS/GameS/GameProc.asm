@@ -58,7 +58,7 @@ MainLoop:
 
 	cmp bx, 1 ;if mouse was pressed
   jne continue
-  ;mov [ExitToMenu], 1 ;bool varible which explains why proc ended
+  mov [ExitToMenu], 1 ;bool varible which explains why proc ended
   jmp @@ExitShourtcut
 
 MainLoopShortcut:
@@ -68,9 +68,10 @@ continue:
 
 	push [pacmanY]
 	push [pacmanX]
-	call CheckWin
-	cmp [Bool],1
-	je WinShortcut
+	call PictureToPixels
+	cmp [isScoreExits],1
+	jne @@GameOver
+  ;if maze is empty from dots -> display game over
 
   ;check if keyboard key available
  	 mov ah, 1
@@ -143,8 +144,6 @@ North:
 
  jmp MainLoopShortcut
 
-WinShortcut:
- jmp @@Win
 WestShortcut:
 	 jmp West
 
@@ -152,17 +151,19 @@ EastShortcut:
 	 jmp East
 
 South:
-
+;proc color pacman in black
  push [pacmanX]
  push [pacmanY]
  call removePacman
 
- mov [pacmanCurrentDirection], 'S'
+ mov [pacmanCurrentDirection], 'S';update direction
 
+ ;calculate score according to next eaten spot
  push [pacmanY]
  push [pacmanX]
  call AddScore_South
 
+ ;find next pos
  push [pacmanY]
  push [pacmanX]
  call FindNextAddedY_South
@@ -226,10 +227,30 @@ West:
 
  jmp MainLoopShortcut
 
-@@Win:
-	call WinDisplay
-	mov ah, 00
-	int 16h
+;If game over [by empty maez or timer]
+@@GameOver:
+  call hideMouse
+  call EndTimer
+	call GameOverDisplay
+  call ShowMouse
+
+WaitForData:
+  call GetMousePos
+  cmp bx, 1
+  jne WaitForData
+
+  shr cx, 1
+  mov [MouseX], cx
+  mov [MouseY], dx
+
+  push QUIT_LEFT_COL_OPEN
+  push QUIT_RIGHT_COL_OPEN
+  push QUIT_TOP_ROW_OPEN
+  push QUIT_BOTTOM_ROW_OPEN
+  call isInRange
+
+  cmp [Bool], 1
+  jne WaitForData
 
 @@ExitProc:
   mov [play],0
@@ -238,103 +259,166 @@ West:
 
 endp Game
 
-;=============================================
-;Check win
-;--------------------------------------------
-;Input:
-;1- CurrentXPos
-;2- CurrentYPos
-;--------------------------------------------
-;Registers:
-;bp, cx, dx, ax
-;--------------------------------------------
-;Output:
-;Bool varible - > isWin [1 - true, 0- fale]
-;=============================================
+
 
 currentX equ [word bp + 4] ;left col
 currentY equ [word bp + 6] ;top row
 rightCol equ [word bp - 2]
 bottomRow equ [word bp - 4]
+; ◄■■► Enter: X,Y of the starting point of the frame & frame size ◄■■►
+; ◄■■► Description: Convertes user drawing to an array of pixels  ◄■■►
 
-i equ [word bp - 6]
-j equ [word bp - 8]
-proc CheckWin
+proc PictureToPixels
 
-	push bp
-	mov bp, sp
-	sub sp, 8
+    push bp
+    mov bp, sp
+    sub sp, 4
 
-	mov [Bool], 0
+    ;initilizing boundarys
+    mov [startX], MAZE_LEFT_EDGE_X
+    mov [startY], 0
+    mov [isScoreExits], 0
 
-	mov ax, currentX
-	mov rightCol, FILE_COLS_PACMAN
-	add rightCol, ax
+    ;pacman edges values:
+    mov ax, currentX
+    mov rightCol, FILE_COLS_PACMAN
+    add rightCol, ax
 
-	mov ax, currentY
-	mov bottomRow, FILE_ROWS_PACMAN
-	add bottomRow, ax
+    mov ax, currentY
+    mov bottomRow, FILE_ROWS_PACMAN
+    add bottomRow, ax
 
-	mov cx, 200
+    ; ◄■■ Setting params
+    mov si, 0 ;int i  = 0
+    mov ax, [startX]
+    mov [defaultX], ax
 
-Rows:
+outerLoop:
+    ;check if cols reached end
+    cmp si, MAZE_RIGHT_EDGE_X
+    je done
+    mov bx, 0 ;int j = 0
+    mov ax, [defaultX]
+    mov [startX], ax
 
-	mov i, cx
-	mov cx, MAZE_RIGHT_EDGE_X
-	Cols:
+innerLoop:
+    ; ◄■■ Get pixel color of X&Y
+    mov ah,0Dh
+    mov cx, [startX]
+    mov dx, [startY]
+    int 10H ; AL = COLOR
 
-		mov j, cx
+    cmp al, YELLOW_DOTS_COLOR_1
+    je writeYellow
+    cmp al, YELLOW_DOTS_COLOR_2
+    je writeYellow
+    jmp nextWrite
 
-		cmp cx, currentX
-		jb @@continue
-		cmp cx, rightCol
-		ja @@continue
+writeYellow:
+    ;find if current check refers to pacman -if so skip
+    push bottomRow
+    push topRow
+    push rightCol
+    push leftCol
+    push [startY]
+    push [startX]
+    call isInRange_Maze
 
-		mov dx, i
-		cmp currentY, dx
-		jb @@continue
-		cmp bottomRow, dx
-		ja @@continue
+    cmp [Bool], 1
+    je SkipPacman
+    mov [isScoreExits], 1
+    jmp done
 
-		jmp Skip
+SkipPacman:
 
+    add [startX], FILE_COLS
 
-@@continue:
-		;cx already represents col [j]
-		mov dx, i
-		mov ah, 0dh
-		int 10h
+nextWrite:
 
-		cmp al, YELLOW_DOTS_COLOR_1
-		je @@ExitProc
-		cmp al, YELLOW_DOTS_COLOR_2
-		je @@ExitProc
+    inc di
+    inc bx
+    inc [startX]
 
-		Skip:
+    cmp bx, 200
+    je innerLoopDone
+    jmp innerLoop
 
-		mov cx, j
-		loop Cols
+innerLoopDone:
+    inc [startY]
+    inc si
+    jmp outerLoop
 
-		mov cx,i
-	loop Rows
+done:
 
-	mov [Bool], 1
+    pop bp
+    add sp, 4
+    ret 4
+endp PictureToPixels
+
+;=============================================
+;Check mouse position on buttons
+;--------------------------------------------
+;Input:
+;1- Value to check X (loop check)
+;2-  Value to check X (loop check)
+;Stack inputs:
+;left column, right column
+;top row, bottom row
+;--------------------------------------------
+;Registers:
+; ax, bp
+;--------------------------------------------
+;Output:
+;varible Bool 1 true/ 0 false
+;=============================================
+
+;Button values
+currentX equ [bp + 14]
+currentY equ [bp + 12]
+leftCol equ [bp + 10]
+rightCol equ [bp + 8]
+topRow equ [bp + 6]
+bottomRow equ [bp + 4]
+
+proc isInRange_Maze
+
+ push bp
+ mov bp, sp
+
+ push ax
+
+ mov [Bool], 0
+
+@@Rows_Check:
+
+	 ;mouse pos bigger than button edge
+ mov ax, currentX
+ ;check if currentX checked is in given row range
+ cmp ax, rightCol
+ ja @@ExitProc
+ cmp ax, leftCol
+ jb @@ExitProc
+
+@@Col_Check:
+
+ mov ax, currentY
+ ;check if currentY checked is in given col range
+ cmp ax, topRow
+ jb @@ExitProc
+ cmp ax, bottomRow
+ ja @@ExitProc
+
+ mov [Bool], 1
+
 
 @@ExitProc:
 
-	add sp, 8
-	pop bp
+ pop ax
+ pop bp
 
-	ret 4
+ ret 12
 
-endp CheckWin
-
-proc WinDisplay
-mov dx, offset Filename_Game_Win
-call ShortBmp
-ret
-
-endp WinDisplay
+endp isInRange_Maze
 ;======================
 ;start screen dispaly
 ;=====================
@@ -346,6 +430,16 @@ proc StratScreen
 
 endp StratScreen
 
+;======================
+;win screen dispaly
+;=====================
+proc GameOverDisplay
+
+	 mov dx, offset Filename_Game_Win
+   call ShortBmp
+	 ret
+
+endp GameOverDisplay
 ;======================
 ;Timer initalizing
 ;=====================
@@ -418,10 +512,12 @@ mov ax,  currentY
 mov normalizedY, ax
 add normalizedY, PACMAN_MIDDLE_Y_PIXLE_WEST
 
+;nextX is the defualt value of currentX in the next step
 mov ax, currentX
 mov nextX, ax
 sub nextX, NEXT_POS_ADDED_PIXELS_X
 
+;check pixel color [if boundary]
 mov cx, currentX
 mov dx, normalizedY
 mov ah,0Dh
@@ -433,6 +529,7 @@ mov ah,0Dh
 	cmp al, BLUE_BOUNDARY_COLOR
 	je @@FindMinSteps
 
+  ;stop counting if next value bigger than next defualt value
 	cmp cx, nextX
 	jbe @@FindMinSteps
 
@@ -441,7 +538,6 @@ mov ah,0Dh
 
 
 @@FindMinSteps:
-
 	inc cx
 	cmp cx, nextX
 	jb @@CheckAddedSteps
@@ -452,6 +548,7 @@ mov nextX, cx ;cx value is next X value
 
 @@CheckAddedSteps:
 
+;calc the distance from boundary
 mov cx, currentX
 sub cx, nextX
 
@@ -461,7 +558,7 @@ jnae @@ExitProc
 add nextX, DISTANCE_FROM_BOUNDARY_X
 
 @@CheckEdge:
-
+  ;lanuch pacman to the other side
 	cmp nextX, MAZE_LEFT_EDGE_X
 	jnbe @@ExitProc
 
@@ -521,6 +618,7 @@ add normalizedY, PACMAN_MIDDLE_Y_PIXLE_WEST
 
 ;Containing next defualt value
 ;CurrentX is top left pacman point -> dosen't present the east muserments properly
+;normalizedX is the top left pacman X value
 mov ax, currentX
 mov normalizedX, ax
 add normalizedX, FILE_COLS_PACMAN
@@ -558,7 +656,7 @@ mov ah,0Dh
 	mov nextX, cx ;cx value is next X value
 
 @@CheckAddedSteps:
-
+;calc the distance from boundary
 mov cx, nextX
 sub cx, normalizedX
 
@@ -568,7 +666,7 @@ jnae @@ExitProc
 sub nextX, DISTANCE_FROM_BOUNDARY_X
 
 @@CheckEdge:
-
+;lanuch pacman to the other side
 	cmp nextX, MAZE_RIGHT_EDGE_X
 	jnae @@ExitProc
 
@@ -621,18 +719,22 @@ push cx
 
 sub sp, 6
 
+;normalizedX is the middle pacman pixel
 mov ax,  currentX
 mov normalizedX, ax
 add normalizedX, PACMAN_MIDDLE_X_PIXLE
 
+;presents bottom row of pacman
 mov ax, currentY
 mov normalizedY, ax
 add normalizedY, FILE_ROWS_PACMAN
 
+;defualt next Y value
 mov ax, normalizedY
 mov nextY, ax
 add nextY, NEXT_POS_ADDED_PIXELS_Y
 
+;check if touching boundary by pixel color
 mov cx, normalizedX
 mov dx, normalizedY
 mov ah,0Dh
@@ -649,7 +751,7 @@ jmp @@IsTouchingBoundray
 
 
 @@FindMinSteps:
-
+  ;find minimum steps
 		dec dx
 		cmp dx, nextY
 		ja @@CheckAddedSteps
@@ -659,7 +761,7 @@ jmp @@IsTouchingBoundray
 		mov nextY, dx ;dx value is next Y value
 
 @@CheckAddedSteps:
-
+  ;set distance from boundary
 	mov dx, nextY
 	sub dx, normalizedY
 
@@ -669,7 +771,7 @@ jmp @@IsTouchingBoundray
 	sub nextY, DISTANCE_FROM_BOUNDARY_Y
 
 @@ExitProc:
-
+  ;restore not normalized pacman values
 	sub nextY, FILE_COLS_PACMAN
 	mov dx, nextY
 	mov currentY, dx
@@ -811,6 +913,7 @@ proc AddScore_West
 	call FindNextAddedX_West
 	pop nextX
 
+  ;find how many times pacman meets dot
 	mov cx, currentX
 	mov dx, normalizedY
 	mov ah,0Dh
@@ -818,7 +921,7 @@ proc AddScore_West
 @@FindNextDot:
 
 	int 10h
-
+  ;each meeting point increases points
 	cmp al, YELLOW_DOTS_COLOR_1
 	je @@IncScore
 	cmp al, YELLOW_DOTS_COLOR_2
@@ -832,7 +935,7 @@ proc AddScore_West
 	jmp @@FindNextDot
 
 @@IncScore:
-
+  ;inc score by defualt val
 	add [score], SCORE_ADDED_POINTS
 
 @@ExitProc:
@@ -896,6 +999,7 @@ call FindNextAddedX_East
 pop nextX
 add nextX, FILE_COLS_PACMAN
 
+;find how many times pacman meets dot
 mov cx, normalizedX
 mov dx, normalizedY
 mov ah,0Dh
@@ -903,6 +1007,7 @@ mov ah,0Dh
 @@FindNextDot:
 
 int 10h
+;each meeting point increases points
 
 cmp al, YELLOW_DOTS_COLOR_1
 je @@IncScore
@@ -961,7 +1066,7 @@ proc AddScore_South
 	push cx
 
 	sub sp, 6
-
+  ;Normalized X,Y present pacman's face when eating dots
 	mov ax, currentX
 	mov normalizedX, ax
 	add normalizedX, PACMAN_MIDDLE_X_PIXLE - 1
@@ -969,7 +1074,7 @@ proc AddScore_South
 	mov ax, currentY
 	mov normalizedY, ax
 	add normalizedY, FILE_ROWS_PACMAN
-
+  ;for calculation of dots betweeen cur pos to next
 	push currentY
 	push currentX
 	call FindNextAddedY_South
@@ -983,7 +1088,7 @@ proc AddScore_South
 @@FindNextDot:
 
 	int 10h
-
+  ;if yellow was found -> increase score
 	cmp al, YELLOW_DOTS_COLOR_1
 	je @@IncScore
 	cmp al, YELLOW_DOTS_COLOR_2
@@ -1040,11 +1145,13 @@ proc AddScore_North
 	push cx
 
 	sub sp, 4
+  ;Normalized X present pacman's face when eating dots
 
 	mov ax, currentX
 	mov normalizedX, ax
 	add normalizedX, PACMAN_MIDDLE_X_PIXLE - 1
 
+  ;for calculation of dots betweeen cur pos to next
 	push currentY
 	push currentX
 	call FindNextAddedY_North
@@ -1057,7 +1164,7 @@ proc AddScore_North
 @@FindNextDot:
 
 	int 10h
-
+  ;if yellow was found -> increase score
 	cmp al, YELLOW_DOTS_COLOR_1
 	je @@IncScore
 	cmp al, YELLOW_DOTS_COLOR_2
@@ -1118,6 +1225,7 @@ proc removePacman
 	 push di
 	 push ax
 
+   ;calculate coloring position
 	 mov di, currentY
 	 mov ax, currentY
 	 ;currentY * 320
@@ -1166,9 +1274,9 @@ proc PacmanFigureDisplay
 	 push dx
 	 push ax
 
+;print pacman according to dirction and X,Y pos
 
 @@North:
-; HI RONI
  mov ax, dirction
 	 cmp ax, 'W'
 	 jne @@South

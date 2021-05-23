@@ -22,38 +22,37 @@ shr cx, 1
 mov [MouseX], cx
 mov [MouseY], dx
 
+;check if quit button available
 push QUIT_LEFT_COL_OPEN
 push QUIT_RIGHT_COL_OPEN
 push QUIT_TOP_ROW_OPEN
 push QUIT_BOTTOM_ROW_OPEN
 call isInRange
 
-cmp [Bool], 1
+cmp [Bool], 1 ;if not, continue
 jne PlayBanner
 
-cmp bx, 1
-
+cmp bx, 1 ;check quit pressed
 je ExitShourtcut
 
-
 PlayBanner:
-
+;check if play button available
 push PLAY_LEFT_COL
 push PLAY_RIGHT_COL
 push PLAY_TOP_ROW
 push PLAY_BOTTOM_ROW
 call isInRange
 
-cmp [Bool], 1
+cmp [Bool], 1;if not, continue
 jne LeaderBoardBanner
 
-cmp bx, 1
+cmp bx, 1;check play pressed, if so jump
 je PlayClick
 
-cmp [isButtonOn], 1
+cmp [isButtonOn], 1 ;if button is not pressed but on, keep it so
 je CheckStatusShourtcut
 
-call HideMouse
+call HideMouse ;if button is not pressed and off, turn it on
 mov [isButtonOn], 1
 call PlayButtonDisplay
 call ShowMouse
@@ -61,7 +60,7 @@ call ShowMouse
 jmp CheckStatus
 
 PlayClick:
-mov [play], 1
+mov [play], 1 ;bool varible explins exit reason
 
 ExitShourtcut:
 jmp @@ExitProc
@@ -74,18 +73,18 @@ push LB_LEFT_COL
 push LB_RIGHT_COL
 push LB_TOP_ROW
 push LB_BOTTOM_ROW
-call isInRange
+call isInRange ;check if leaderboard
 
-cmp [Bool], 1
+cmp [Bool], 1 ;if not, continue
 jne GameInstructionsBanner
 
-cmp bx, 1
+cmp bx, 1 ;if clicked, displays
 je LbClick
 
-cmp [isButtonOn], 1
+cmp [isButtonOn], 1;if button is not pressed but on, keep it so
 je CheckStatusShourtcut
 
-call HideMouse
+call HideMouse;if button is not pressed and off, turn it on
 mov [isButtonOn], 1
 call LbButtonDisplay
 call ShowMouse
@@ -96,12 +95,13 @@ CheckStatusShourtcut:
 jmp CheckStatus
 
 LbClick:
+;Display "NOT available" and continue to main loop
 mov [play], 0
 call HideMouse
 call NADisplay
-call ToWait
-call ShowMouse
+call Delay
 call LbButtonDisplay
+call ShowMouse
 jmp CheckStatusShourtcut
 
 GameInstructionsBanner:
@@ -110,19 +110,19 @@ push INST_LEFT_COL
 push INST_RIGHT_COL
 push INST_TOP_ROW
 push INST_BOTTOM_ROW
-call isInRange
+call isInRange ;check if game instructions
 
 
 cmp [Bool], 1
 jne @@CleanScreen
 
-cmp bx, 1
+cmp bx, 1 ;i was clicked, display
 je InstClick
 
-cmp [isButtonOn], 1
+cmp [isButtonOn], 1 ;if button is not pressed but on, keep it so
 je CheckStatusShourtcut
 
-call HideMouse
+call HideMouse;if button is not pressed and off, turn it on
 mov [isButtonOn], 1
 call InstButtonDisplay
 call ShowMouse
@@ -131,12 +131,12 @@ jmp CheckStatus
 
 InstClick:
 mov [play], 0
-call GameInstructionsPages
-call InstButtonDisplay
+call GameInstructionsPages ;display rules
+call InstButtonDisplay ;return to last preview
 jmp CheckStatusShourtcut
 
 @@CleanScreen:
-
+;if none of the keys are available restore screen to default
 cmp [isButtonOn], 1
 jne CheckStatusShourtcut
 
@@ -176,7 +176,8 @@ proc GameInstructionsPages
 InstructionsLoop:
 
  call GetMousePos
- cmp bx, 1
+ cmp bx, 1 ;if anything pressed -> check what was pressed.
+          ;otherwise, wait for input
  jne InstructionsLoop
 
  shr cx, 1
@@ -187,10 +188,10 @@ InstructionsLoop:
  push QUIT_RIGHT_COL_OPEN
  push QUIT_TOP_ROW_OPEN
  push QUIT_BOTTOM_ROW_OPEN
- call isInRange
+ call isInRange ;check quit button
 
  cmp [Bool], 1
- jne NextPage
+ jne NextPage ;if not available, continue
  je @@ExitShourtcut
 
 NextPage:
@@ -199,15 +200,12 @@ NextPage:
  push ARROW_FORWARD_RIGHT_COL
  push ARROW_FORWARD_TOP_ROW
  push ARROW_FORWARD_BOTTOM_ROW
- call isInRange
+ call isInRange ;check forward arrow
 
  cmp [Bool], 1
- jne BackPage
+ jne BackPage;if not available, continue
 
- ;cmp bx, 1
- ;jne InstructionsLoop
-
- cmp count, 4
+ cmp count, 4 ;top limit -> page cant be bigger than 4
  je InstructionsLoopShortcut
  inc count
  jmp CheckCount
@@ -220,17 +218,13 @@ BackPage:
  push ARROW_BACKWARD_RIGHT_COL
  push ARROW_BACKWARD_TOP_ROW
  push ARROW_BACKWARD_BOTTOM_ROW
- call isInRange
+ call isInRange;check backwards arrow
 
  cmp [Bool], 1
- jne InstructionsLoopShortcut
+ jne InstructionsLoopShortcut;if not available, continue
 
-;cmp bx, 1
- ;jne InstructionsLoopShortcut
-
- cmp count, 0
+ cmp count, 0;top limit -> page cant be smaller than 4
  je InstructionsLoopShortcut
-
  dec count
  jmp CheckCount
 
@@ -238,6 +232,7 @@ InstructionsLoopShortcut:
  jmp InstructionsLoop
 
 CheckCount:
+;print page display by counter
  cmp count, 1
  je FirstPage
  cmp count, 2
@@ -296,7 +291,9 @@ call Delay
 
 endp GameInstructionsPages
 
-
+;================
+; 	Delay Mouse
+;===============
 proc Delay
 
 	pusha
@@ -392,32 +389,29 @@ proc isInRange
 
 Rows_Check:
 
-	 ;mouse pos bigger than button edge
+ ;mouse pos bigger than button edge
  mov ax, [MouseX]
-
-	 cmp ax, rightCol
+ ;check if mouse is in rows range
+ cmp ax, rightCol
  ja @@ExitProc
-
-	 cmp ax, leftCol
+ cmp ax, leftCol
  jb @@ExitProc
 
 Col_Check:
 
  mov ax, [MouseY]
-
-	 cmp ax, topRow
+ ;check if mouse is in col range
+ cmp ax, topRow
  jb @@ExitProc
-
  cmp ax, bottomRow
  ja @@ExitProc
 
  mov [Bool], 1
 
-
 @@ExitProc:
 
  pop ax
-	 pop bp
+ pop bp
 
  ret 8
 
@@ -486,13 +480,3 @@ proc NADisplay
  ret
 
 endp NADisplay
-
-proc ToWait
-
- mov cx, 0Fh
- mov dx, 4240
- mov ah, 86h
- int 15h
- ret
-
-endp ToWait
