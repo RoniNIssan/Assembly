@@ -1,3 +1,6 @@
 
 
-1. check distance from boundary
+1. Game manual skip pages bug
+2. exit game to main menu [exits to Game manual]
+3. Win\Lose check
+3. Timer

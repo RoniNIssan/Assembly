@@ -1,6 +1,8 @@
 IDEAL
 MODEL small
 STACK 100h
+p186
+jumps
 
 
 
@@ -55,394 +57,397 @@ ARROW_BACKWARD_BOTTOM_ROW = 193
 
 DATASEG
 
+Filename_StartScreen db FILENAME_SCREEN, 0
+Filename_PlayButton db FILENAME_PLAY, 0
+Filename_LbButton db FILENAME_LB, 0
+Filename_Inst_button db FILENAME_INST, 0
+Filename_NA_Dis db FILENAME_NA, 0
+Filename_FirstInst db FILENAME_INST_1, 0
+Filename_SecondInst db FILENAME_INST_2, 0
+Filename_ThirdInst db FILENAME_INST_3, 0
+Filename_FourthInst db FILENAME_INST_4, 0
 
+ScrLine 	db FILE_COLS dup (0)  ; One Color line read buffer
 
+FileHandle	dw ?
+Header 	    db 54 dup(0)
+Palette 	db 400h dup (0)
 
-	Filename_StartScreen db FILENAME_SCREEN, 0
-	Filename_PlayButton db FILENAME_PLAY, 0
-	Filename_LbButton db FILENAME_LB, 0
-	Filename_Inst_button db FILENAME_INST, 0
-	Filename_NA_Dis db FILENAME_NA, 0
-	Filename_FirstInst db FILENAME_INST_1, 0
-	Filename_SecondInst db FILENAME_INST_2, 0
-	Filename_ThirdInst db FILENAME_INST_3, 0
-	Filename_FourthInst db FILENAME_INST_4, 0
+BmpFileErrorMsg    	db 'Error At Opening Bmp File ',FILENAME_SCREEN, 0dh, 0ah,'$'
+ErrorFile           db 0
 
-	ScrLine 	db FILE_COLS dup (0)  ; One Color line read buffer
+BmpLeft dw ?
+BmpTop dw ?
+BmpColSize dw ?
+BmpRowSize dw ?
 
-	FileHandle	dw ?
-	Header 	    db 54 dup(0)
-	Palette 	db 400h dup (0)
+matrix dw ?
 
-	BmpFileErrorMsg    	db 'Error At Opening Bmp File ',FILENAME_SCREEN, 0dh, 0ah,'$'
-	ErrorFile           db 0
+		;Mouse Varibles
+	MouseX dw ?
+	MouseY dw ?
 
-	BmpLeft dw ?
-	BmpTop dw ?
-	BmpColSize dw ?
-	BmpRowSize dw ?
+;Boolean
+Bool db 0
+isButtonOn db 0
 
-	matrix dw ?
-
-			;Mouse Varibles
-			MouseX dw ?
-			MouseY dw ?
-
-	;Boolean
-	Bool db 0
-	isButtonOn db 0
-
-	;Buttons on
-	play db 0
-	Lb db 0
-	inst db 0
+;Buttons on
+play db 0
+Lb db 0
+inst db 0
 
 
 CODESEG
 
-	ORG 100h
+ORG 100h
 
 start:
- mov ax, @data
- mov ds,ax
+mov ax, @data
+mov ds,ax
 
 
 ;========TEXT MODE========
 ;		Openning Scrren
 
- call stratGraphicMode
- call StratScreen_OPEN
-
- call OpenScreen
+call stratGraphicMode
+call OpenScreen
 
 EXIT:
 
 call finishGraphicMode
 mov ax, 4C00h ; returns control to dos
-	 int 21h
+ int 21h
 
-;=============================================
-;Open screen graphics
-;--------------------------------------------
-;Output:
-;via global bool varibles about turned buttons
-;=============================================
-proc OpenScreen
+ ;=============================================
+ ;Open screen graphics
+ ;--------------------------------------------
+ ;Output:
+ ;via global bool varibles about turned buttons
+ ;=============================================
+ proc OpenScreen
 
-mov ax,0h ;initilaize mouse
-int 33h
+ call StratScreen_OPEN
 
-call ShowMouse
+ mov ax,0h ;initilaize mouse
+ int 33h
 
-CheckStatus: ;maon loop
+ call ShowMouse
 
-call GetMousePos
+ CheckStatus: ;maon loop
 
-shr cx, 1
-mov [MouseX], cx
-mov [MouseY], dx
+ call GetMousePos
 
-push QUIT_LEFT_COL_OPEN
-push QUIT_RIGHT_COL_OPEN
-push QUIT_TOP_ROW_OPEN
-push QUIT_BOTTOM_ROW_OPEN
-call isInRange
+ shr cx, 1
+ mov [MouseX], cx
+ mov [MouseY], dx
 
-cmp [Bool], 1
-jne PlayBanner
+ push QUIT_LEFT_COL_OPEN
+ push QUIT_RIGHT_COL_OPEN
+ push QUIT_TOP_ROW_OPEN
+ push QUIT_BOTTOM_ROW_OPEN
+ call isInRange
 
-cmp bx, 1
-je ExitShourtcut
+ cmp [Bool], 1
+ jne PlayBanner
 
+ cmp bx, 1
+ je ExitShourtcut
 
-PlayBanner:
 
-push PLAY_LEFT_COL
-push PLAY_RIGHT_COL
-push PLAY_TOP_ROW
-push PLAY_BOTTOM_ROW
-call isInRange
+ PlayBanner:
 
-cmp [Bool], 1
-jne LeaderBoardBanner
+ push PLAY_LEFT_COL
+ push PLAY_RIGHT_COL
+ push PLAY_TOP_ROW
+ push PLAY_BOTTOM_ROW
+ call isInRange
 
-cmp bx, 1
-je PlayClick
+ cmp [Bool], 1
+ jne LeaderBoardBanner
 
-cmp [isButtonOn], 1
-je CheckStatusShourtcut
+ cmp bx, 1
+ je PlayClick
 
-call HideMouse
+ cmp [isButtonOn], 1
+ je CheckStatusShourtcut
 
-mov [isButtonOn], 1
-call PlayButtonDisplay
+ call HideMouse
 
-call ShowMouse
+ mov [isButtonOn], 1
+ call PlayButtonDisplay
 
-jmp CheckStatus
+ call ShowMouse
 
-PlayClick:
-mov [play], 1
+ jmp CheckStatus
 
-ExitShourtcut:
-jmp @@ExitProc
+ PlayClick:
+ mov [play], 1
 
+ ExitShourtcut:
+ jmp @@ExitProc
 
-LeaderBoardBanner:
 
-push LB_LEFT_COL
-push LB_RIGHT_COL
-push LB_TOP_ROW
-push LB_BOTTOM_ROW
-call isInRange
+ LeaderBoardBanner:
 
-cmp [Bool], 1
-jne GameInstructionsBanner
+ push LB_LEFT_COL
+ push LB_RIGHT_COL
+ push LB_TOP_ROW
+ push LB_BOTTOM_ROW
+ call isInRange
 
-cmp bx, 1
-je LbClick
+ cmp [Bool], 1
+ jne GameInstructionsBanner
 
-cmp [isButtonOn], 1
-je CheckStatusShourtcut
+ cmp bx, 1
+ je LbClick
 
-call HideMouse
-mov [isButtonOn], 1
-call LbButtonDisplay
-call ShowMouse
+ cmp [isButtonOn], 1
+ je CheckStatusShourtcut
 
-jmp CheckStatus
+ call HideMouse
+ mov [isButtonOn], 1
+ call LbButtonDisplay
+ call ShowMouse
 
-CheckStatusShourtcut:
-jmp CheckStatus
+ jmp CheckStatus
 
-LbClick:
+ CheckStatusShourtcut:
+ jmp CheckStatus
 
-call HideMouse
-call NADisplay
-call ToWait
-call ShowMouse
-call LbButtonDisplay
-jmp CheckStatusShourtcut
+ LbClick:
 
-GameInstructionsBanner:
+ call HideMouse
+ call NADisplay
+ call ToWait
+ call ShowMouse
+ call LbButtonDisplay
+ jmp CheckStatusShourtcut
 
-push INST_LEFT_COL
-push INST_RIGHT_COL
-push INST_TOP_ROW
-push INST_BOTTOM_ROW
-call isInRange
+ GameInstructionsBanner:
 
+ push INST_LEFT_COL
+ push INST_RIGHT_COL
+ push INST_TOP_ROW
+ push INST_BOTTOM_ROW
+ call isInRange
 
-cmp [Bool], 1
-jne @@CleanScreen
 
-cmp bx, 1
-je InstClick
+ cmp [Bool], 1
+ jne @@CleanScreen
 
-cmp [isButtonOn], 1
-je CheckStatusShourtcut
+ cmp bx, 1
+ je InstClick
 
-call HideMouse
-mov [isButtonOn], 1
-call InstButtonDisplay
-call ShowMouse
+ cmp [isButtonOn], 1
+ je CheckStatusShourtcut
 
-jmp CheckStatus
+ call HideMouse
+ mov [isButtonOn], 1
+ call InstButtonDisplay
+ call ShowMouse
 
+ jmp CheckStatus
 
-InstClick:
 
-call GameInstructionsPages
-;To exit Game manual a press Needed - temporary
-mov ah, 00
-int 16h
-call InstButtonDisplay
-jmp CheckStatusShourtcut
+ InstClick:
 
-@@CleanScreen:
+ call GameInstructionsPages
+ ;To exit Game manual a press Needed - temporary
+ call InstButtonDisplay
+ jmp CheckStatusShourtcut
 
-cmp [isButtonOn], 1
-jne CheckStatusShourtcut
+ @@CleanScreen:
 
-call HideMouse
+ cmp [isButtonOn], 1
+ jne CheckStatusShourtcut
 
-mov [isButtonOn], 0
-call StratScreen_OPEN
+ call HideMouse
 
-call ShowMouse
-jmp CheckStatus
-@@ExitProc:
+ mov [isButtonOn], 0
+ call StratScreen_OPEN
 
-ret
+ call ShowMouse
+ jmp CheckStatus
+ @@ExitProc:
 
-endp OpenScreen
+ ret
 
+ endp OpenScreen
 
 
-;=============================================
-;Displays Game manual
-;--------------------------------------------
-;Output:
-;Screen
-;=============================================
-count equ [word bp - 2]
-proc GameInstructionsPages
 
-	push bp
-	mov bp, sp
-	sub sp, 2
+ ;=============================================
+ ;Displays Game manual
+ ;--------------------------------------------
+ ;Output:
+ ;Screen
+ ;=============================================
+ count equ [word bp - 2]
+ proc GameInstructionsPages
 
-	mov count, 1
-	jmp FirstPage
+ 	push bp
+ 	mov bp, sp
+ 	sub sp, 2
 
-InstructionsLoop:
 
-	call GetMousePos
-	shr cx, 1
-	mov [MouseX], cx
-	mov [MouseY], dx
+ 	mov count, 1
+ 	jmp FirstPage
 
-	push QUIT_LEFT_COL_OPEN
-	push QUIT_RIGHT_COL_OPEN
-	push QUIT_TOP_ROW_OPEN
-	push QUIT_BOTTOM_ROW_OPEN
-	call isInRange
+ InstructionsLoop:
 
-	cmp [Bool], 1
-	jne NextPage
-
-	cmp bx, 1
-	je @@ExitShourtcut
-
-NextPage:
-
-	push ARROW_FORWARD_LEFT_COL
-	push ARROW_FORWARD_RIGHT_COL
-	push ARROW_FORWARD_TOP_ROW
-	push ARROW_FORWARD_BOTTOM_ROW
-	call isInRange
-
-	cmp [Bool], 1
-	jne BackPage
-
+ 	call GetMousePos
 	cmp bx, 1
 	jne InstructionsLoop
 
-	cmp count, 4
-	je InstructionsLoopShortcut
-	inc count
-	jmp CheckCount
+ 	shr cx, 1
+ 	mov [MouseX], cx
+ 	mov [MouseY], dx
 
-@@ExitShourtcut:
-	jmp @@ExitProc
+ 	push QUIT_LEFT_COL_OPEN
+ 	push QUIT_RIGHT_COL_OPEN
+ 	push QUIT_TOP_ROW_OPEN
+ 	push QUIT_BOTTOM_ROW_OPEN
+ 	call isInRange
 
-BackPage:
-	push ARROW_BACKWARD_LEFT_COL
-	push ARROW_BACKWARD_RIGHT_COL
-	push ARROW_BACKWARD_TOP_ROW
-	push ARROW_BACKWARD_BOTTOM_ROW
-	call isInRange
+ 	cmp [Bool], 1
+ 	jne NextPage
+ 	je @@ExitShourtcut
 
-	cmp [Bool], 1
-	jne InstructionsLoopShortcut
+ NextPage:
 
-	cmp bx, 1
-	jne InstructionsLoopShortcut
+ 	push ARROW_FORWARD_LEFT_COL
+ 	push ARROW_FORWARD_RIGHT_COL
+ 	push ARROW_FORWARD_TOP_ROW
+ 	push ARROW_FORWARD_BOTTOM_ROW
+ 	call isInRange
 
-	cmp count, 0
-	je InstructionsLoopShortcut
+ 	cmp [Bool], 1
+ 	jne BackPage
 
-	dec count
-	jmp CheckCount
+ 	;cmp bx, 1
+ 	;jne InstructionsLoop
 
-InstructionsLoopShortcut:
-	jmp InstructionsLoop
+ 	cmp count, 4
+ 	je InstructionsLoopShortcut
+ 	inc count
+ 	jmp CheckCount
 
-CheckCount:
-	cmp count, 1
-	je FirstPage
-	cmp count, 2
+ @@ExitShourtcut:
+ 	jmp @@ExitProc
+
+ BackPage:
+ 	push ARROW_BACKWARD_LEFT_COL
+ 	push ARROW_BACKWARD_RIGHT_COL
+ 	push ARROW_BACKWARD_TOP_ROW
+ 	push ARROW_BACKWARD_BOTTOM_ROW
+ 	call isInRange
+
+ 	cmp [Bool], 1
+ 	jne InstructionsLoopShortcut
+
+ ;cmp bx, 1
+ 	;jne InstructionsLoopShortcut
+
+ 	cmp count, 0
+ 	je InstructionsLoopShortcut
+
+ 	dec count
+ 	jmp CheckCount
+
+ InstructionsLoopShortcut:
+ 	jmp InstructionsLoop
+
+ CheckCount:
+ 	cmp count, 1
+ 	je FirstPage
+ 	cmp count, 2
 	je SecondPage
-	cmp count, 3
-	je ThirdPage
-	cmp count, 4
-	je FourthPage
-	jne InstructionsLoopShortcut
+ 	cmp count, 3
+ 	je ThirdPage
+ 	cmp count, 4
+ 	je FourthPage
+ 	jne InstructionsLoopShortcut
 
-FirstPage:
+ FirstPage:
 
-	call HideMouse
-	mov dx, offset Filename_FirstInst
-	call ShortBmp
+ 	call HideMouse
+ 	mov dx, offset Filename_FirstInst
+ 	call ShortBmp
+ 	call ShowMouse
+	call Delay
+ 	jmp InstructionsLoopShortcut
+
+
+ SecondPage:
+ 	call HideMouse
+ 	mov dx, offset Filename_SecondInst
+ 	call ShortBmp
+ 	call ShowMouse
+	call Delay
+ 	jmp InstructionsLoopShortcut
+
+ ThirdPage:
+
+ 	call HideMouse
+ 	mov dx, offset Filename_ThirdInst
+ 	call ShortBmp
+ 	call ShowMouse
+	call Delay
+	call Delay
+ 	jmp InstructionsLoopShortcut
+
+ FourthPage:
+
+ 	call HideMouse
+ 	mov dx, offset Filename_FourthInst
+ 	call ShortBmp
 	call ShowMouse
-	jmp InstructionsLoopShortcut
+	call Delay
+ 	jmp InstructionsLoopShortcut
 
 
-SecondPage:
-	call HideMouse
-	mov dx, offset Filename_SecondInst
-	call ShortBmp
-	call ShowMouse
-	jmp InstructionsLoopShortcut
+ @@ExitProc:
+ call Delay
 
-ThirdPage:
+ 		add sp, 2
+ 		pop bp
 
-	call HideMouse
-	mov dx, offset Filename_ThirdInst
-	call ShortBmp
-	call ShowMouse
-	jmp InstructionsLoopShortcut
+ 		ret
 
-FourthPage:
+ endp GameInstructionsPages
 
-	call HideMouse
-	mov dx, offset Filename_FourthInst
-	call ShortBmp
-	call ShowMouse
-	jmp InstructionsLoopShortcut
+ ;================
+ ; 	Show Mouse
+ ;===============
+ proc ShowMouse
 
+ mov ax, 1h
+ int 33h
 
-@@ExitProc:
+ ret
 
-		add sp, 2
-		pop bp
+ endp ShowMouse
+ ;================
+ ; 	Hide Mouse
+ ;===============
+ proc HideMouse
 
-		ret
+ mov ax, 2h
+ int 33h
+ ret
 
-endp GameInstructionsPages
+ endp HideMouse
+ ;================
+ ; 	GetMousePos
+ ;===============
+ proc GetMousePos
 
-;================
-; 	Show Mouse
-;===============
-proc ShowMouse
+ mov ax, 3h
+ int 33h
+ ret
 
-mov ax, 1h
-int 33h
-
-ret
-
-endp ShowMouse
-;================
-; 	Hide Mouse
-;===============
-proc HideMouse
-
-mov ax, 2h
-int 33h
-ret
-
-endp HideMouse
-;================
-; 	GetMousePos
-;===============
-proc GetMousePos
-
-mov ax, 3h
-int 33h
-ret
-
-endp GetMousePos
-;=============================================
+ endp GetMousePos
+;--------------------------------------------
 ;Open Bmp file
 ;--------------------------------------------
 ;Input:
@@ -450,14 +455,14 @@ endp GetMousePos
 ;=============================================
 proc ShortBmp
 
-	mov [BmpLeft],0 ;start point
-	mov [BmpTop],0
-	mov [BmpColSize], FILE_COLS
-	mov [BmpRowSize] ,FILE_ROWS
-	call OpenShowBmp
-	ret
+mov [BmpLeft],0 ;start point
+mov [BmpTop],0
+mov [BmpColSize], FILE_COLS
+mov [BmpRowSize] ,FILE_ROWS
+call OpenShowBmp
+ret
 
-	endp ShortBmp
+endp ShortBmp
 
 ;=============================================
 ;Check mouse position on buttons
@@ -484,43 +489,43 @@ bottomRow equ [bp + 4]
 
 proc isInRange
 
- push bp
- mov bp, sp
+push bp
+mov bp, sp
 
- push ax
+push ax
 
- mov [Bool], 0
+mov [Bool], 0
 
 Rows_Check:
 
-	 ;mouse pos bigger than button edge
- mov ax, [MouseX]
+ ;mouse pos bigger than button edge
+mov ax, [MouseX]
 
-	 cmp ax, rightCol
- ja @@ExitProc
+ cmp ax, rightCol
+ja @@ExitProc
 
-	 cmp ax, leftCol
- jb @@ExitProc
+ cmp ax, leftCol
+jb @@ExitProc
 
 Col_Check:
 
- mov ax, [MouseY]
+mov ax, [MouseY]
 
-	 cmp ax, topRow
- jb @@ExitProc
+ cmp ax, topRow
+jb @@ExitProc
 
- cmp ax, bottomRow
- ja @@ExitProc
+cmp ax, bottomRow
+ja @@ExitProc
 
- mov [Bool], 1
+mov [Bool], 1
 
 
 @@ExitProc:
 
- pop ax
-	 pop bp
+pop ax
+ pop bp
 
- ret 8
+ret 8
 
 endp isInRange
 
@@ -530,14 +535,14 @@ endp isInRange
 ;=====================
 proc StratScreen_OPEN
 
-	 mov dx, offset Filename_StartScreen
-	 mov [BmpLeft],0 ;start point
-	 mov [BmpTop],0
-	 mov [BmpColSize], FILE_COLS
-	 mov [BmpRowSize] ,FILE_ROWS
-	 call OpenShowBmp
+ mov dx, offset Filename_StartScreen
+ mov [BmpLeft],0 ;start point
+ mov [BmpTop],0
+ mov [BmpColSize], FILE_COLS
+ mov [BmpRowSize] ,FILE_ROWS
+ call OpenShowBmp
 
-	 ret
+ ret
 
 endp StratScreen_OPEN
 
@@ -546,10 +551,10 @@ endp StratScreen_OPEN
 ;==================================
 proc PlayButtonDisplay
 
-	 mov dx, offset Filename_PlayButton
-	 call ShortBmp
+ mov dx, offset Filename_PlayButton
+ call ShortBmp
 
-	 ret
+ ret
 
 endp PlayButtonDisplay
 
@@ -558,10 +563,10 @@ endp PlayButtonDisplay
 ;=========================================
 proc LbButtonDisplay
 
-	 mov dx, offset Filename_LbButton
-	 call ShortBmp
+ mov dx, offset Filename_LbButton
+ call ShortBmp
 
- ret
+ret
 
 endp LbButtonDisplay
 
@@ -570,10 +575,10 @@ endp LbButtonDisplay
 ;===============================================
 proc InstButtonDisplay
 
-	 mov dx, offset Filename_Inst_button
-	 call ShortBmp
+ mov dx, offset Filename_Inst_button
+ call ShortBmp
 
- ret
+ret
 
 endp InstButtonDisplay
 ;===============================================
@@ -581,12 +586,26 @@ endp InstButtonDisplay
 ;===============================================
 proc NADisplay
 
-	 mov dx, offset Filename_NA_Dis
-	 call ShortBmp
+ mov dx, offset Filename_NA_Dis
+ call ShortBmp
 
- ret
+ret
 
 endp NADisplay
+
+proc Delay
+
+	pusha
+	mov cx, 3
+	mov dx, 0D40h
+	mov al, 0
+	mov ah, 86h
+	int 15h
+
+	popa
+	ret
+
+endp Delay
 ;============================================================================================
 ;=======================
 ;Put bmp file on screen
@@ -605,7 +624,6 @@ call ReadBmpPalette
 call CopyBmpPalette
 
 call  ShowBMP
-
 
 call CloseBmpFile
 
@@ -658,7 +676,7 @@ endp ReadBmpHeader
 
 
 proc ReadBmpPalette near ; Read BMP file color palette, 256 colors * 4 bytes (400h)
-					 ; 4 bytes for each color BGR + null)
+				 ; 4 bytes for each color BGR + null)
 push cx
 push dx
 
@@ -783,10 +801,10 @@ endp ShowBMP
 
 proc stratGraphicMode
 
- mov ax, 13h
- int 10h
+mov ax, 13h
+int 10h
 
- ret
+ret
 
 endp stratGraphicMode
 
@@ -799,11 +817,11 @@ endp stratGraphicMode
 
 proc finishGraphicMode
 
- mov al, 3
- mov ah, 0
- int 10h
+mov al, 3
+mov ah, 0
+int 10h
 
- ret
+ret
 
 endp finishGraphicMode
 
@@ -816,11 +834,11 @@ endp finishGraphicMode
 
 proc ToWait
 
- mov cx, 0Fh
- mov dx, 4240
- mov ah, 86h
- int 15h
- ret
+mov cx, 0Fh
+mov dx, 4240
+mov ah, 86h
+int 15h
+ret
 
 endp ToWait
 
@@ -838,7 +856,7 @@ DrawLine:
 cmp si,0
 jz ExitDrawLine
 
-	mov ah,0ch
+mov ah,0ch
 int 10h    ; put pixel
 
 
@@ -849,7 +867,7 @@ jmp DrawLine
 
 ExitDrawLine:
 pop cx
-	pop si
+pop si
 ret
 endp DrawHorizontalLine
 
@@ -869,7 +887,7 @@ DrawVertical:
 cmp si,0
 jz ExitDrawLine
 
-	mov ah,0ch
+mov ah,0ch
 int 10h    ; put pixel
 
 
@@ -881,7 +899,7 @@ jmp DrawVertical
 
 @@ExitDrawLine:
 pop dx
-	pop si
+pop si
 ret
 endp DrawVerticalLine
 

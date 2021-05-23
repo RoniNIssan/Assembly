@@ -1,543 +1,377 @@
-IDEAL
-MODEL small
-STACK 100h
+;============
+;	End Timer
+;===========
+proc EndTimer
+
+push	ds
+mov	ax,251Ch
+mov	dx,[timerOfs]
+mov	ds,[timerSeg]
+int	21h
+pop	ds
 
+ret
+
+endp EndTimer
+
+;============
+;	game
+;===========
+proc Game
 
-FILENAME_GAME_DISPLAY equ 'Game.bmp'
-FILENAME_PACMAN_NORTH equ 'PN.bmp'
-FILENAME_PACMAN_SOUTH equ 'PS.bmp'
-FILENAME_PACMAN_EAST equ 'PE.bmp'
-FILENAME_PACMAN_WEST equ 'PW.bmp'
-FILENAME_WIN equ 'win.bmp'
-FILENAME_LOOSE equ 'loose.bmp'
-
-;Maze
-FILE_ROWS_MAZE = 200
-FILE_COLS_MAZE = 320
+call hideMouse
+call StratScreen
+mov [pacmanX], START_POS_X
+mov [pacmanY], START_POS_Y
+
+ mov ax,0h  ;initilaizing mouse
+ int 33h
 
-;Paman
-START_POS_X = 86
-START_POS_Y = 146
+ call ShowMouse
+ call Timer
+
+;Show pacman figure according tp direction and current Position
+ push [pacmanCurrentDirection]
+ push [pacmanX]
+ push [pacmanY]
+ call PacmanFigureDisplay
+
+
+MainLoop:
+
+	call ScoreDisplay
+
+  ;Absorb mouse position
+  call GetMousePos
+	shr cx, 1
+	mov [MouseX], cx
+	mov [MouseY], dx
+
+  ;check if mouse is on quit button
+	push QUIT_LEFT_COL_GAME
+	push QUIT_RIGHT_COL_GAME
+	push QUIT_TOP_ROW_GAME
+	push QUIT_BOTTOM_ROW_GAME
+	call isInRange ;returns value in bool
+	cmp [Bool], 1
+	jne continue
+
+	cmp bx, 1 ;if mouse was pressed
+  jne continue
+  ;mov [ExitToMenu], 1 ;bool varible which explains why proc ended
+  jmp @@ExitShourtcut
 
-;Maze colors
-BLUE_BOUNDARY_COLOR = 0FCh
-YELLOW_DOTS_COLOR_1 = 07Fh
-YELLOW_DOTS_COLOR_2 = 0FBh
-
-;Pacman figure
-FILE_ROWS_PACMAN = 9
-FILE_COLS_PACMAN = 9
-
-;Quit Banner values
-QUIT_RIGHT_COL_GAME = 313
-QUIT_LEFT_COL_GAME = 289
-QUIT_TOP_ROW_GAME = 9
-QUIT_BOTTOM_ROW_GAME = 33
+MainLoopShortcut:
+		 jmp MainLoop
 
-;Pacman values
-MAZE_RIGHT_BOUNDARY_X = 167
-MAZE_LEFT_BOUNDARY_X = 13
+continue:
 
-NEXT_POS_ADDED_PIXELS_Y = 7
-NEXT_POS_ADDED_PIXELS_X = 7
+	push [pacmanY]
+	push [pacmanX]
+	call CheckWin
+	cmp [Bool],1
+	je WinShortcut
 
-PACMAN_MIDDLE_X_PIXLE = (FILE_COLS_PACMAN - 1) / 2 + 1
-PACMAN_MIDDLE_Y_PIXLE_WEST = (FILE_ROWS_PACMAN - 1) / 2 + 1
+  ;check if keyboard key available
+ 	 mov ah, 1
+ 	 int 16h
 
-;Needed when turn:
-DISTANCE_FROM_BOUNDARY_X = 2; when moving on Y - distanc1e between ghost and boundary
-DISTANCE_FROM_BOUNDARY_Y = 2; when moving on X - distance between ghost and boundary
-MAZE_RIGHT_EDGE_X = 172
-MAZE_LEFT_EDGE_X = 8
+	 jz MainLoopShortcut ;not available -> check mouse new pos
 
+   ;get key value
+	 mov ah, 0
+	 int 16h
 
-;----- Equates Timeer
-ticks		EQU	36
-BIOSData	EQU	040h
-LowTimer	EQU	006Ch
-PIC8259		EQU	0020h
-EOI		    EQU	0020h
+	 cmp al, 'W'
+	 je North
+	 cmp al, 'w'
+	 je North
 
-TIMEOUT = 90
-TIME_ROW = 46
-TIME_COL = 20
+	 cmp al, 'S'
+	 je South
+	 cmp al, 's'
+	 je South
 
+	 cmp al, 'D'
+	 je EastShortcut
+	 cmp al, 'd'
+	 je EastShortcut
 
-;Score
-SCORE_ROW = 36
-SCORE_COL = 20
-SCORE_ADDED_POINTS = 10
+	 cmp al, 'A'
+	 je WestShortcut
+	 cmp al, 'a'
+	 je WestShortcut
 
-DATASEG
 
+	 jne MainLoopShortcut
 
-	Filename_Maze db FILENAME_GAME_DISPLAY, 0
-	Filename_PacmanNorth db FILENAME_PACMAN_NORTH, 0
-	Filename_PacmanSouth db FILENAME_PACMAN_SOUTH, 0
-	Filename_PacmanEast db FILENAME_PACMAN_EAST, 0
-	Filename_PacmanWest db FILENAME_PACMAN_WEST, 0
-	Filename_Game_Win db Filename_Win, 0
-	Filename_Game_Loose db FILENAME_LOOSE, 0
-	ScrLine db FILE_COLS_MAZE dup (0)  ; One Color line read buffer
+@@ExitShourtcut:
+   jmp @@ExitProc
 
-	FileHandle	dw ?
-	Header 	    db 54 dup(0)
-	Palette 	db 400h dup (0)
+   ;mov [ExitToMenu], 1
+	 ;push	ds
+	 ;mov	ax,251Ch
+	 ;mov	dx,[timerOfs]
+	 ;mov	ds,[timerSeg]
+	 ;int	21h
+	 ;pop	ds
 
-	BmpFileErrorMsg    	db 'Error At Opening Bmp File ',FILE_COLS_PACMAN, 0dh, 0ah,'$'
-	ErrorFile           db 0
+North:
 
-	BmpLeft dw ?
-	BmpTop dw ?
-	BmpColSize dw ?
-	BmpRowSize dw ?
+;proc color pacman in black
+ push [pacmanX]
+ push [pacmanY]
+ call removePacman
 
-	matrix dw ?
+ mov [pacmanCurrentDirection], 'W' ;update direction
 
-	pacmanX dw START_POS_X
-	pacmanY dw START_POS_Y
+;calculate score according to next eaten spot
+ push [pacmanY]
+ push [pacmanX]
+ call AddScore_North
 
-	currentPoint dw ?
-	pacmanCurrentDirection dw 'D'
+;find next pos
+ push [pacmanY]
+ push [pacmanX]
+ call FindNextAddedY_North
+ pop [pacmanY]
 
-	;Boolean
-	Bool db 0
-	ExitToMenu db 0
-	TimeIsUp db 0
-	ScoreUp db 0
+ push [pacmanCurrentDirection]
+ push [pacmanX]
+ push [pacmanY]
+ call PacmanFigureDisplay
 
-	;Timer
-	exitCode1	db	0
-	timerSeg	dw	?
-	timerOfs	dw	?
+ jmp MainLoopShortcut
 
-	;Score
-	score dw 0
+WinShortcut:
+ jmp @@Win
+WestShortcut:
+	 jmp West
 
-	;Mouse
-	MouseX dw ?
-	MouseY dw ?
+EastShortcut:
+	 jmp East
 
-pacmanBlank db	0,0,0,0,0,0,0
-						db	0,0,0,0,0,0,0
-						db	0,0,0,0,0,0,0
-						db	0,0,0,0,0,0,0
-						db	0,0,0,0,0,0,0
-						db	0,0,0,0,0,0,0
-						db	0,0,0,0,0,0,0
+South:
 
+ push [pacmanX]
+ push [pacmanY]
+ call removePacman
 
-CODESEG
+ mov [pacmanCurrentDirection], 'S'
 
-	ORG 100h
+ push [pacmanY]
+ push [pacmanX]
+ call AddScore_South
 
-start:
-	mov	ax,@data
-	mov	ds,ax
-	mov	es,ax
-	mov	[word cs:difference],ticks
+ push [pacmanY]
+ push [pacmanX]
+ call FindNextAddedY_South
 
+ pop [pacmanY]
 
-;========TEXT MODE========
-;		Openning Scrren
+ push [pacmanCurrentDirection]
+ push [pacmanX]
+ push [pacmanY]
+ call PacmanFigureDisplay
 
- call stratGraphicMode
- call Game
+@@MainLoopShortcut:
+jmp MainLoopShortcut
 
-EXIT:
+East:
 
-	call EndTimer
-	call finishGraphicMode
+ push [pacmanX]
+ push [pacmanY]
+ call removePacman
 
-	mov ax, 4C00h ; returns control to dos
- 	int 21h
+ mov [pacmanCurrentDirection], 'D'
 
-	;mov	ah,04Ch
-	;mov	al,[exitCode1]
-	;int 21h
+ push [pacmanX]
+ push [pacmanY]
+ call AddScore_East
 
+ push [pacmanX]
+ push [pacmanY]
+ call FindNextAddedX_East
 
-	;============
-	;	End Timer
-	;===========
-	proc EndTimer
+ pop [pacmanX]
 
-	push	ds
-	mov	ax,251Ch
-	mov	dx,[timerOfs]
-	mov	ds,[timerSeg]
-	int	21h
-	pop	ds
-
-	ret
-
-	endp EndTimer
-
-	;============
-	;	game
-	;===========
-	proc Game
-
-	call StratScreen
-	mov [pacmanX], START_POS_X
-	mov [pacmanY], START_POS_Y
-
-	 mov ax,0h
-	 int 33h
-
-	call ShowMouse
-
-	 call Timer
-
-	 push [pacmanCurrentDirection]
-	 push [pacmanX]
-	 push [pacmanY]
-	 call PacmanFigureDisplay
-
-
-	MainLoop:
-
-		call ScoreDisplay
-
-		call GetMousePos
-
-	  ;cmp [TimeIsUp],1
-	  ;je MainMenu
-
-		shr cx, 1
-		mov [MouseX], cx
-		mov [MouseY], dx
-
-		push QUIT_LEFT_COL_GAME
-		push QUIT_RIGHT_COL_GAME
-		push QUIT_TOP_ROW_GAME
-		push QUIT_BOTTOM_ROW_GAME
-		call isInRange
-
-		cmp [Bool], 1
-		jne continue
-
-		cmp bx, 1
-	  jne continue
-	;MainMenu:
-	  mov [ExitToMenu], 1
-	  jmp @@ExitShourtcut
-
-	MainLoopShortcut:
-			 jmp MainLoop
-
-	continue:
-
-		push [pacmanY]
-		push [pacmanX]
-		call CheckWin
-		cmp [Bool],1
-		je WinShortcut
-
-	 	 mov ah, 1
-	 	 int 16h
-
-		 jz MainLoopShortcut
-
-		 mov ah, 0
-		 int 16h
-
-		 cmp al, 'W'
-		 je North
-		 cmp al, 'w'
-		 je North
-
-		 cmp al, 'S'
-		 je South
-		 cmp al, 's'
-		 je South
-
-		 cmp al, 'D'
-		 je EastShortcut
-		 cmp al, 'd'
-		 je EastShortcut
-
-		 cmp al, 'A'
-		 je WestShortcut
-		 cmp al, 'a'
-		 je WestShortcut
-
-
-		 jne MainLoopShortcut
-	@@ExitShourtcut:
-	   jmp @@ExitProc
-
-	   ;mov [ExitToMenu], 1
-		 ;push	ds
-		 ;mov	ax,251Ch
-		 ;mov	dx,[timerOfs]
-		 ;mov	ds,[timerSeg]
-		 ;int	21h
-		 ;pop	ds
-
-	North:
-
-	 push [pacmanX]
-	 push [pacmanY]
-	 call removePacman
-
-	 mov [pacmanCurrentDirection], 'W'
-
-	 push [pacmanY]
-	 push [pacmanX]
-	 call AddScore_North
-
-	 push [pacmanY]
-	 push [pacmanX]
-	 call FindNextAddedY_North
-
-	 pop [pacmanY]
-
-	 push [pacmanCurrentDirection]
-	 push [pacmanX]
-	 push [pacmanY]
-	 call PacmanFigureDisplay
+ push [pacmanCurrentDirection]
+ push [pacmanX]
+ push [pacmanY]
+ call PacmanFigureDisplay
 
 	 jmp MainLoopShortcut
+West:
 
-	WinShortcut:
-	 jmp @@Win
-	WestShortcut:
-		 jmp West
+ push [pacmanX]
+ push [pacmanY]
+ call removePacman
 
-	EastShortcut:
-		 jmp East
+ mov [pacmanCurrentDirection], 'A'
 
-	South:
+ push [pacmanX]
+ push [pacmanY]
+ call AddScore_West
 
-	 push [pacmanX]
-	 push [pacmanY]
-	 call removePacman
+ push [pacmanX]
+ push [pacmanY]
+ call FindNextAddedX_West
 
-	 mov [pacmanCurrentDirection], 'S'
+ pop [pacmanX]
 
-	 push [pacmanY]
-	 push [pacmanX]
-	 call AddScore_South
+ push [pacmanCurrentDirection]
+ push [pacmanX]
+ push [pacmanY]
+ call PacmanFigureDisplay
 
-	 push [pacmanY]
-	 push [pacmanX]
-	 call FindNextAddedY_South
+ jmp MainLoopShortcut
 
-	 pop [pacmanY]
+@@Win:
+	call WinDisplay
+	mov ah, 00
+	int 16h
 
-	 push [pacmanCurrentDirection]
-	 push [pacmanX]
-	 push [pacmanY]
-	 call PacmanFigureDisplay
-
-	@@MainLoopShortcut:
-	jmp MainLoopShortcut
-
-	East:
-
-	 push [pacmanX]
-	 push [pacmanY]
-	 call removePacman
-
-	 mov [pacmanCurrentDirection], 'D'
-
-	 push [pacmanX]
-	 push [pacmanY]
-	 call AddScore_East
-
-	 push [pacmanX]
-	 push [pacmanY]
-	 call FindNextAddedX_East
-
-	 pop [pacmanX]
-
-	 push [pacmanCurrentDirection]
-	 push [pacmanX]
-	 push [pacmanY]
-	 call PacmanFigureDisplay
-
-		 jmp MainLoopShortcut
-	West:
-
-	 push [pacmanX]
-	 push [pacmanY]
-	 call removePacman
-
-	 mov [pacmanCurrentDirection], 'A'
-
-	 push [pacmanX]
-	 push [pacmanY]
-	 call AddScore_West
-
-	 push [pacmanX]
-	 push [pacmanY]
-	 call FindNextAddedX_West
-
-	 pop [pacmanX]
-
-	 push [pacmanCurrentDirection]
-	 push [pacmanX]
-	 push [pacmanY]
-	 call PacmanFigureDisplay
-
-	 jmp MainLoopShortcut
-
-	@@Win:
-		call WinDisplay
-		mov ah, 00
-		int 16h
-
-	@@ExitProc:
-
-	  call EndTimer
-		ret
-
-	endp Game
-
-	;=============================================
-	;Check win
-	;--------------------------------------------
-	;Input:
-	;1- CurrentXPos
-	;2- CurrentYPos
-	;--------------------------------------------
-	;Registers:
-	;bp, cx, dx, ax
-	;--------------------------------------------
-	;Output:
-	;Bool varible - > isWin [1 - true, 0- fale]
-	;=============================================
-
-	currentX equ [word bp + 4] ;left col
-	currentY equ [word bp + 6] ;top row
-	rightCol equ [word bp - 2]
-	bottomRow equ [word bp - 4]
-
-	i equ [word bp - 6]
-	j equ [word bp - 8]
-	proc CheckWin
-
-		push bp
-		mov bp, sp
-		sub sp, 8
-
-		mov [Bool], 0
-
-		mov ax, currentX
-		mov rightCol, FILE_COLS_PACMAN
-		add rightCol, ax
-
-		mov ax, currentY
-		mov bottomRow, FILE_ROWS_PACMAN
-		add bottomRow, ax
-
-		mov cx, 200
-
-	Rows:
-
-		mov i, cx
-		mov cx, MAZE_RIGHT_EDGE_X
-		Cols:
-
-			mov j, cx
-
-			cmp cx, currentX
-			jb @@continue
-			cmp cx, rightCol
-			ja @@continue
-
-			mov dx, i
-			cmp currentY, dx
-			jb @@continue
-			cmp bottomRow, dx
-			ja @@continue
-
-			jmp Skip
-
-
-	@@continue:
-			;cx already represents col [j]
-			mov dx, i
-			mov ah, 0dh
-			int 10h
-
-			cmp al, YELLOW_DOTS_COLOR_1
-			je @@ExitProc
-			cmp al, YELLOW_DOTS_COLOR_2
-			je @@ExitProc
-
-			Skip:
-
-			mov cx, j
-			loop Cols
-
-			mov cx,i
-		loop Rows
-
-		mov [Bool], 1
-
-	@@ExitProc:
-
-		add sp, 8
-		pop bp
-
-		ret 4
-
-	endp CheckWin
-
-	proc WinDisplay
-	mov dx, offset Filename_Game_Win
-	mov [BmpLeft], 0
-	mov [BmpTop],0
-	mov [BmpColSize], FILE_COLS_MAZE
-	mov [BmpRowSize] ,FILE_ROWS_MAZE
-	call OpenShowBmp
-
+@@ExitProc:
+  mov [play],0
+  call EndTimer
 	ret
 
-	endp WinDisplay
-	;======================
-	;start screen dispaly
-	;=====================
-	proc StratScreen
+endp Game
 
-		 mov dx, offset Filename_Maze
-		 mov [BmpLeft], 0
-		 mov [BmpTop],0
-		 mov [BmpColSize], FILE_COLS_MAZE
-		 mov [BmpRowSize] ,FILE_ROWS_MAZE
-		 call OpenShowBmp
+;=============================================
+;Check win
+;--------------------------------------------
+;Input:
+;1- CurrentXPos
+;2- CurrentYPos
+;--------------------------------------------
+;Registers:
+;bp, cx, dx, ax
+;--------------------------------------------
+;Output:
+;Bool varible - > isWin [1 - true, 0- fale]
+;=============================================
 
-		 ret
+currentX equ [word bp + 4] ;left col
+currentY equ [word bp + 6] ;top row
+rightCol equ [word bp - 2]
+bottomRow equ [word bp - 4]
 
-	endp StratScreen
+i equ [word bp - 6]
+j equ [word bp - 8]
+proc CheckWin
 
-	;======================
-	;Timer initalizing
-	;=====================
-	proc Timer
+	push bp
+	mov bp, sp
+	sub sp, 8
 
-		 ; save the current interrupt verctor.
-		 ; the timer interrupt number is 1C
-	 	 push	es
-	 	 mov	ax, 351Ch
-	 	 int	21h
-	 	 mov	[timerSeg],es
-	 	 mov	[timerOfs],bx
-	 	 pop	es
+	mov [Bool], 0
 
-		 ;set the new inerrupt vector with our function
-		 push	ds
-		 mov	ax,251Ch
-		 push	cs
-		 pop	ds
-		 mov	dx, offset PrintSecondsElapse
-		 int	21h
-		 pop	ds
-		 ret
+	mov ax, currentX
+	mov rightCol, FILE_COLS_PACMAN
+	add rightCol, ax
 
-	endp Timer
+	mov ax, currentY
+	mov bottomRow, FILE_ROWS_PACMAN
+	add bottomRow, ax
+
+	mov cx, 200
+
+Rows:
+
+	mov i, cx
+	mov cx, MAZE_RIGHT_EDGE_X
+	Cols:
+
+		mov j, cx
+
+		cmp cx, currentX
+		jb @@continue
+		cmp cx, rightCol
+		ja @@continue
+
+		mov dx, i
+		cmp currentY, dx
+		jb @@continue
+		cmp bottomRow, dx
+		ja @@continue
+
+		jmp Skip
+
+
+@@continue:
+		;cx already represents col [j]
+		mov dx, i
+		mov ah, 0dh
+		int 10h
+
+		cmp al, YELLOW_DOTS_COLOR_1
+		je @@ExitProc
+		cmp al, YELLOW_DOTS_COLOR_2
+		je @@ExitProc
+
+		Skip:
+
+		mov cx, j
+		loop Cols
+
+		mov cx,i
+	loop Rows
+
+	mov [Bool], 1
+
+@@ExitProc:
+
+	add sp, 8
+	pop bp
+
+	ret 4
+
+endp CheckWin
+
+proc WinDisplay
+mov dx, offset Filename_Game_Win
+call ShortBmp
+ret
+
+endp WinDisplay
+;======================
+;start screen dispaly
+;=====================
+proc StratScreen
+
+	 mov dx, offset Filename_Maze
+   call ShortBmp
+	 ret
+
+endp StratScreen
+
+;======================
+;Timer initalizing
+;=====================
+proc Timer
+
+	 ; save the current interrupt verctor.
+	 ; the timer interrupt number is 1C
+ 	 push	es
+ 	 mov	ax, 351Ch
+ 	 int	21h
+ 	 mov	[timerSeg],es
+ 	 mov	[timerOfs],bx
+ 	 pop	es
+
+	 ;set the new inerrupt vector with our function
+	 push	ds
+	 mov	ax,251Ch
+	 push	cs
+	 pop	ds
+	 mov	dx, offset PrintSecondsElapse
+	 int	21h
+	 pop	ds
+	 ret
+
+endp Timer
+
 ;======================
 ;Score Display
 ;=====================
@@ -1253,71 +1087,6 @@ proc AddScore_North
 
 endp AddScore_North
 ;=============================================
-;Check mouse position on buttons
-;--------------------------------------------
-;Input:
-;1- MouseX -> cx (shr cx, 1)
-;2- MouseY -> dx
-;Stack inputs:
-;left column, right column
-;top row, bottom row
-;--------------------------------------------
-;Registers:
-; ax, bp
-;--------------------------------------------
-;Output:
-;varible Bool 1 true/ 0 false
-;=============================================
-
-;Button values
-leftCol equ [word bp + 10]
-rightCol equ [word bp + 8]
-topRow equ [word bp + 6]
-bottomRow equ [word bp + 4]
-
-proc isInRange
-
-	 push bp
-	 mov bp, sp
-
- 	 push ax
-
-	 mov [Bool], 0
-
-Rows_Check:
-
-     ;mouse pos bigger than button edge
-	 mov ax, [MouseX]
-
-   cmp ax, rightCol
-	 ja @@ExitProc
-
-   cmp ax, leftCol
-	 jb @@ExitProc
-
-Col_Check:
-
-	 mov ax, [MouseY]
-
-     cmp ax, topRow
-	 jb @@ExitProc
-
-	 cmp ax, bottomRow
-	 ja @@ExitProc
-
-	 mov [Bool], 1
-
-
-@@ExitProc:
-
-	 pop ax
-     pop bp
-
-	 ret 8
-
-endp isInRange
-
-;=============================================
 ;Remove pacman and dots (9*9)
 ;--------------------------------------------
 ;Input:
@@ -1447,29 +1216,6 @@ PacmanDisplay:
 	 ret 6
 
 endp PacmanFigureDisplay
-
-
-proc setPacmanCurrentPoint
-
-	 push di
-	 push ax
-
-	 mov di, [pacmanY]
-
-	 ;currentY * right boundary ("smaller screen")
- mov ax, MAZE_RIGHT_BOUNDARY_X
- mul di
- mov di, ax
-
-	 add di, [pacmanX]
-	 mov [currentPoint], di
-
-	 pop ax
-	 pop di
-
-	 ret
-
-endp setPacmanCurrentPoint
 
 
 ;============================================================================================
@@ -1691,37 +1437,7 @@ proc finishGraphicMode
  ret
 
 endp finishGraphicMode
-;================
-; 	Show Mouse
-;===============
-proc ShowMouse
 
-mov ax, 1h
-int 33h
-
-ret
-
-endp ShowMouse
-;================
-; 	Hide Mouse
-;===============
-proc HideMouse
-
-mov ax, 2h
-int 33h
-ret
-
-endp HideMouse
-;================
-; 	GetMousePos
-;===============
-proc GetMousePos
-
-mov ax, 3h
-int 33h
-ret
-
-endp GetMousePos
 ;------------------------------------------------------------------------
 ; PrintSecondsElapse -   Interrupt Service Routine (ISR)
 ;------------------------------------------------------------------------
@@ -1915,6 +1631,3 @@ pop ax
 pop es
 	ret
 endp putMatrixInScreen
-
-
-END start
