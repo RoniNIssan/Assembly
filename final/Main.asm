@@ -5,13 +5,13 @@ STACK 256h
 jumps
 p186
 
-include "C:\TASM\Proj\displayS\OpenS\OpenEqu.asm"
-include "C:\TASM\Proj\displayS\GameS\GameEqu.asm"
+include "OpenEqu.asm"
+include "GameEqu.asm"
 
 DATASEG
 
-include "C:\TASM\Proj\displayS\OpenS\OpenData.asm"
-include "C:\TASM\Proj\displayS\GameS\GameData.asm"
+include "OpenData.asm"
+include "GameData.asm"
 
 
 CODESEG
@@ -52,7 +52,7 @@ EXIT_END:
   mov ax, 4C00h ; returns control to dos
   int 21h
 
-include "C:\TASM\Proj\displayS\OpenS\OpenProc.asm"
-include "C:\TASM\Proj\displayS\GameS\GameProc.asm"
+include "OpenProc.asm"
+include "GameProc.asm"
 
 END Start
