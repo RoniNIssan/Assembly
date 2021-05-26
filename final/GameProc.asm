@@ -503,41 +503,49 @@ mov ax, currentX
 mov nextX, ax
 sub nextX, NEXT_POS_ADDED_PIXELS_X
 
-;check pixel color [if boundary]
+;saveX value which changes according to boundary check
 mov cx, currentX
 mov saveX, cx
 
 @@IsTouchingBoundray:
+  ;===============================================
+  ; loop checks when pacman meets boundary by:
+  ;1. one added pixel forward
+  ;2. pacman pront col
+  ;when color is equal to boundary -> return smallest X
+  ;==============================================
 
   mov dx, currentY
-  mov cx, FILE_COLS_PACMAN
+  mov cx, FILE_COLS_PACMAN ;check of front col
 
   @@CheckByYs:
-  push cx
+  push cx ;save counter value
 
+  ;dx value is initilaized before inner loop
   mov cx, saveX
   mov ah,0Dh
-	int 10h
+	int 10h ;absorb color
 	cmp al, BLUE_BOUNDARY_COLOR
-	je PopStack
+	je @@PopStack
 
   pop cx
-  inc dx
+  inc dx ;raise col pointer
 
   loop @@CheckByYs
 
-  ;stop counting if next value bigger than next defualt value
+  ;stop counting if next value smaller than next defualt value
   mov cx, saveX
 	cmp cx, nextX
 	jbe @@FindMinSteps
 
-	dec saveX
+	dec saveX ;decrease nextX counter
 	jmp @@IsTouchingBoundray
 
-PopStack:
+@@PopStack:
   pop cx
 
 @@FindMinSteps:
+  ;find the minimum steps forward
   mov cx, saveX
 	inc cx
 	cmp cx, nextX
@@ -553,6 +561,8 @@ mov nextX, cx ;cx value is next X value
 mov cx, currentX
 sub cx, nextX
 
+;Check if the difference between current pos to next sticks pacman to boundary
+;if so, move the pacman to the proper distance from boundary.
 cmp cx, DISTANCE_FROM_BOUNDARY_X
 jnae @@ExitProc
 
@@ -621,47 +631,54 @@ mov ax, currentX
 mov normalizedX, ax
 add normalizedX, FILE_COLS_PACMAN
 
+;nextX is the defualt value of currentX in the next step
 mov ax, normalizedX
 mov nextX, ax
 add nextX, NEXT_POS_ADDED_PIXELS_X
 
-mov cx, normalizedX
-mov dx, normalizedY
-mov ah,0Dh
-
+;saveX value which changes according to boundary check
 mov cx, normalizedX
 mov saveX, cx
 
 @@IsTouchingBoundray:
+;===============================================
+; loop checks when pacman meets boundary by:
+;1. one added pixel forward
+;2. pacman pront col
+;when color is equal to boundary -> return smallest X
+;==============================================
 
   mov dx, currentY
-  mov cx, FILE_COLS_PACMAN
+  mov cx, FILE_COLS_PACMAN;check of front col
 
   @@CheckByYs:
-  push cx
+  push cx ;save counter value
 
+  ;dx value is initilaized before inner loop
   mov cx, saveX
   mov ah,0Dh
-  int 10h
+	int 10h ;absorb color
   cmp al, BLUE_BOUNDARY_COLOR
   je @@PopStack
 
   pop cx
-  inc dx
+  inc dx ;decrease col pointer
 
   loop @@CheckByYs
 
+  ;stop counting if next value bigger than next defualt value
   mov cx, saveX
 	cmp cx, nextX
 	jae @@FindMinSteps
 
-	inc saveX
+	inc saveX;decrease nextX counter
 	jmp @@IsTouchingBoundray
 
 @@PopStack:
   pop cx
 @@FindMinSteps:
-  mov cx, saveX
+;find the minimum steps forward
+  mov cx, saveX ;restore x value
 	dec cx
 	cmp cx, nextX
 	ja @@CheckAddedSteps
@@ -675,6 +692,8 @@ mov saveX, cx
 mov cx, nextX
 sub cx, normalizedX
 
+;Check if the difference between current pos to next sticks pacman to boundary
+;if so, move the pacman to the proper distance from boundary.
 cmp cx, DISTANCE_FROM_BOUNDARY_X
 jnae @@ExitProc
 
@@ -720,7 +739,7 @@ endp FindNextAddedX_East
 currentY equ [word bp + 6]
 currentX equ [word bp + 4]
 nextY equ [word bp - 8]
-normalizedX equ [word bp - 10]
+saveX equ [word bp - 10]
 normalizedY equ [word bp - 12]
 
 proc FindNextAddedY_South
@@ -734,12 +753,7 @@ push cx
 
 sub sp, 6
 
-;normalizedX is the middle pacman pixel
-mov ax,  currentX
-mov normalizedX, ax
-add normalizedX, PACMAN_MIDDLE_X_PIXLE
-
-;presents bottom row of pacman
+;presents bottom row of pacman [instead of top]
 mov ax, currentY
 mov normalizedY, ax
 add normalizedY, FILE_ROWS_PACMAN
@@ -749,21 +763,47 @@ mov ax, normalizedY
 mov nextY, ax
 add nextY, NEXT_POS_ADDED_PIXELS_Y
 
-;check if touching boundary by pixel color
-mov cx, normalizedX
+
+;initalizing dx value
 mov dx, normalizedY
-mov ah,0Dh
 
 @@IsTouchingBoundray:
+;===============================================
+; loop checks when pacman meets boundary by:
+;1. one added pixel forward
+;2. pacman pront row
+;when color is equal to boundary -> return smallest Y
+;==============================================
 
-int 10h
+;default checked X value
+mov cx, currentX
+mov saveX, cx
 
+mov cx, FILE_COLS_PACMAN;check of front col
+@@CheckByXs:
+push cx ;save counter value
+
+;dx y value already saved
+mov cx, saveX
+mov ah,0Dh
+int 10h;absorb color
 cmp al, BLUE_BOUNDARY_COLOR
-je @@FindMinSteps
+je @@PopStack
+
+inc saveX  ;raise row pointer
+pop cx
+
+loop @@CheckByXs
+
+;stop counting if next value bigger than next defualt value
+cmp dx, nextY
+jae @@FindMinSteps
 
 inc dx
 jmp @@IsTouchingBoundray
 
+@@PopStack:
+pop cx
 
 @@FindMinSteps:
   ;find minimum steps
@@ -776,7 +816,8 @@ jmp @@IsTouchingBoundray
 		mov nextY, dx ;dx value is next Y value
 
 @@CheckAddedSteps:
-  ;set distance from boundary
+;Check if the difference between current pos to next sticks pacman to boundary
+;if so, move the pacman to the proper distance from boundary.
 	mov dx, nextY
 	sub dx, normalizedY
 
@@ -830,46 +871,53 @@ proc FindNextAddedY_North
 
   sub sp, 4
 
+  ;defualt next Y value
   mov ax, currentY
   mov nextY, ax
   sub nextY, NEXT_POS_ADDED_PIXELS_Y
 
-  mov cx, currentX
-  mov saveX, cx
+  ;initalizing dx value
   mov dx, currentY
 
 @@IsTouchingBoundray:
-
+;===============================================
+; loop checks when pacman meets boundary by:
+;1. one added pixel forward
+;2. pacman pront row
+;when color is equal to boundary -> return smallest Y
+;==============================================
+  ;default checked X value
   mov cx, currentX
   mov saveX, cx
 
-  mov cx, FILE_COLS_PACMAN
+  mov cx, FILE_COLS_PACMAN ;check of front col
   @@CheckByXs:
-  push cx
+  push cx ;save counter value
 
-  mov cx, saveX
   ;dx y value already saved
+  mov cx, saveX
   mov ah,0Dh
-  int 10h
+  int 10h ;absorb color
   cmp al, BLUE_BOUNDARY_COLOR
   je @@PopStack
 
-  inc saveX
+  inc saveX ;raise row pointer
   pop cx
 
   loop @@CheckByXs
 
+  ;stop counting if next value smaller than next defualt value
   cmp dx, nextY
   jbe @@FindMinSteps
 
-  dec dx
+  dec dx ;decrease Y value
   jmp @@IsTouchingBoundray
 
 @@PopStack:
   pop cx
 
 @@FindMinSteps:
-
+;find minimum steps
 		inc dx
 		cmp dx, nextY
 		jb @@CheckAddedSteps
@@ -879,7 +927,8 @@ proc FindNextAddedY_North
 		mov nextY, dx ;dx value is next Y value
 
 @@CheckAddedSteps:
-
+;Check if the difference between current pos to next sticks pacman to boundary
+;if so, move the pacman to the proper distance from boundary.
 	mov dx, currentY
 	sub dx, nextY
 
