@@ -969,7 +969,7 @@ endp FindNextAddedY_North
 currentX equ [word bp + 6]
 currentY equ [word bp + 4]
 nextX equ [word bp - 8]
-normalizedY equ [word bp - 10]
+saveX equ [word bp - 10]
 
 proc AddScore_West
 
@@ -981,38 +981,48 @@ proc AddScore_West
 	push cx
 
 	sub sp, 4
-	;Normalize currentY value to present to its middle pixel according to direction
-
-	mov ax,  currentY
-	mov normalizedY, ax
-	add normalizedY, PACMAN_MIDDLE_Y_PIXLE_WEST - 1
 
 	push currentX
 	push currentY
 	call FindNextAddedX_West
 	pop nextX
 
-  ;find how many times pacman meets dot
-	mov cx, currentX
-	mov dx, normalizedY
-	mov ah,0Dh
+  mov cx, currentX
+  mov saveX, cx
 
 @@FindNextDot:
 
-	int 10h
+  mov dx, currentY
+  mov cx, FILE_COLS_PACMAN ;check of front col
+
+  @@CheckByYs:
+  push cx ;save counter value
+
+  ;dx value is initilaized before inner loop
+  mov cx, saveX
+  mov ah,0Dh
+  int 10h ;absorb color
   ;each meeting point increases points
 	cmp al, YELLOW_DOTS_COLOR_1
-	je @@IncScore
+  je @@PopStack
 	cmp al, YELLOW_DOTS_COLOR_2
-	je @@IncScore
+  je @@PopStack
 
-	cmp cx, nextX
-	jbe @@ExitProc
+  pop cx
+  inc dx ;raise col pointer
 
-	dec cx
+  loop @@CheckByYs
 
-	jmp @@FindNextDot
+  ;stop counting if next value smaller than next defualt value
+  mov cx, saveX
+  cmp cx, nextX
+  jbe @@ExitProc
 
+  dec saveX ;decrease nextX counter
+  jmp @@FindNextDot
+
+@@PopStack:
+  pop cx
 @@IncScore:
   ;inc score by defualt val
 	add [score], SCORE_ADDED_POINTS
@@ -1046,7 +1056,7 @@ endp AddScore_West
 currentX equ [word bp + 6]
 currentY equ [word bp + 4]
 nextX equ [word bp - 8]
-normalizedY equ [word bp - 10]
+saveX equ [word bp - 10]
 normalizedX equ [word bp - 12]
 
 proc AddScore_East
@@ -1060,17 +1070,11 @@ push cx
 
 sub sp, 6
 
-;Normalize currentY value to present to its middle pixel according to direction
-mov ax,  currentY
-mov normalizedY, ax
-add normalizedY, PACMAN_MIDDLE_Y_PIXLE_WEST - 1
-
 ;Containing next defualt value
 ;CurrentX is top left pacman point -> dosen't present the east muserments properly
 mov ax, currentX
 mov normalizedX, ax
 add normalizedX, FILE_COLS_PACMAN
-
 
 push currentX
 push currentY
@@ -1078,27 +1082,42 @@ call FindNextAddedX_East
 pop nextX
 add nextX, FILE_COLS_PACMAN
 
-;find how many times pacman meets dot
 mov cx, normalizedX
-mov dx, normalizedY
-mov ah,0Dh
+mov saveX, cx
 
 @@FindNextDot:
 
-int 10h
+mov dx, currentY
+mov cx, FILE_COLS_PACMAN ;check of front col
+
+@@CheckByYs:
+push cx ;save counter value
+
+;dx value is initilaized before inner loop
+mov cx, saveX
+mov ah,0Dh
+int 10h ;absorb color
 ;each meeting point increases points
-
 cmp al, YELLOW_DOTS_COLOR_1
-je @@IncScore
+je @@PopStack
 cmp al, YELLOW_DOTS_COLOR_2
-je @@IncScore
+je @@PopStack
 
+pop cx
+inc dx ;raise col pointer
+
+loop @@CheckByYs
+
+;stop counting if next value smaller than next defualt value
+mov cx, saveX
 cmp cx, nextX
 jae @@ExitProc
 
-inc cx
-
+inc saveX ;increase nextX counter
 jmp @@FindNextDot
+
+@@PopStack:
+pop cx
 
 @@IncScore:
 
@@ -1132,7 +1151,7 @@ endp AddScore_East
 currentY equ [word bp + 6]
 currentX equ [word bp + 4]
 nextY equ [word bp - 8]
-normalizedX equ [word bp - 10]
+saveX equ [word bp - 10]
 normalizedY equ [word bp - 12]
 
 proc AddScore_South
@@ -1145,10 +1164,6 @@ proc AddScore_South
 	push cx
 
 	sub sp, 6
-  ;Normalized X,Y present pacman's face when eating dots
-	mov ax, currentX
-	mov normalizedX, ax
-	add normalizedX, PACMAN_MIDDLE_X_PIXLE - 1
 
 	mov ax, currentY
 	mov normalizedY, ax
@@ -1160,28 +1175,42 @@ proc AddScore_South
 	pop nextY
 	add nextY, FILE_ROWS_PACMAN
 
-	mov cx, normalizedX
-	mov dx, normalizedY
-	mov ah,0Dh
-
+  mov dx, normalizedY
 @@FindNextDot:
 
-	int 10h
-  ;if yellow was found -> increase score
+  ;default checked X value
+  mov cx, currentX
+  mov saveX, cx
+
+  mov cx, FILE_COLS_PACMAN;check of front col
+  @@CheckByXs:
+  push cx ;save counter value
+
+  ;dx y value already saved
+  mov cx, saveX
+  mov ah,0Dh
+  int 10h ;absorb color
+  ;each meeting point increases points
 	cmp al, YELLOW_DOTS_COLOR_1
-	je @@IncScore
+  je @@PopStack
 	cmp al, YELLOW_DOTS_COLOR_2
-	je @@IncScore
+  je @@PopStack
+
+  inc saveX  ;raise row pointer
+  pop cx
+
+  loop @@CheckByXs
 
 	cmp dx, nextY
 	jae @@ExitProc
 
 	inc dx
-
 	jmp @@FindNextDot
 
-@@IncScore:
+@@PopStack:
+  pop cx
 
+@@IncScore:
 	add [score], SCORE_ADDED_POINTS
 
 @@ExitProc:
@@ -1212,7 +1241,7 @@ endp AddScore_South
 currentY equ [word bp + 6]
 currentX equ [word bp + 4]
 nextY equ [word bp - 8]
-normalizedX equ [word bp - 10]
+saveX equ [word bp - 10]
 
 proc AddScore_North
 
@@ -1224,11 +1253,6 @@ proc AddScore_North
 	push cx
 
 	sub sp, 4
-  ;Normalized X present pacman's face when eating dots
-
-	mov ax, currentX
-	mov normalizedX, ax
-	add normalizedX, PACMAN_MIDDLE_X_PIXLE - 1
 
   ;for calculation of dots betweeen cur pos to next
 	push currentY
@@ -1236,26 +1260,41 @@ proc AddScore_North
 	call FindNextAddedY_North
 	pop nextY
 
-	mov cx, normalizedX
-	mov dx, currentY
-	mov ah,0Dh
+  ;initalizing dx value
+  mov dx, currentY
 
 @@FindNextDot:
+  ;default checked X value
+  mov cx, currentX
+  mov saveX, cx
 
-	int 10h
-  ;if yellow was found -> increase score
+  mov cx, FILE_COLS_PACMAN ;check of front col
+  @@CheckByXs:
+  push cx ;save counter value
+
+  ;dx y value already saved
+  mov cx, saveX
+  mov ah,0Dh
+  int 10h ;absorb color
+  ;each meeting point increases points
 	cmp al, YELLOW_DOTS_COLOR_1
-	je @@IncScore
+  je @@PopStack
 	cmp al, YELLOW_DOTS_COLOR_2
-	je @@IncScore
+  je @@PopStack
+
+  inc saveX ;raise row pointer
+  pop cx
+
+  loop @@CheckByXs
 
 	cmp dx, nextY
 	jbe @@ExitProc
 
 	dec dx
-
 	jmp @@FindNextDot
 
+@@PopStack:
+  pop cx
 @@IncScore:
 
 	add [score], SCORE_ADDED_POINTS
