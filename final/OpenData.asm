@@ -11,6 +11,7 @@ Filename_FourthInst db FILENAME_INST_4, 0
 ;Mouse Varibles
 MouseX dw ?
 MouseY dw ?
+isMouseOn dw ?
 
 ;Boolean
 Bool db 0

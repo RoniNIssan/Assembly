@@ -28,7 +28,12 @@ mov [pacmanCurrentDirection], DEFAULT_DIRECTION
  mov ax,0h  ;initilaizing mouse
  int 33h
 
- call ShowMouse
+ call GetMousePos
+ shr cx, 1
+ mov [MouseX], cx
+ mov [MouseY], dx
+
+ ;call ShowMouse
  call Timer
 
 ;Show pacman figure according tp direction and current Position
@@ -40,14 +45,41 @@ mov [pacmanCurrentDirection], DEFAULT_DIRECTION
 
 MainLoop:
 
+  ;cmp [TimeIsUp], 1
+  ;je @@GameOver
+
 	call ScoreDisplay
 
   ;Absorb mouse position
   call GetMousePos
 	shr cx, 1
+  ;if mouse current pos changed, show mouse
+  ;cmp with previous values
+  cmp cx, [MouseX]
+  jne ShowMouseWhenMoved
+  cmp dx, [MouseY]
+  jne ShowMouseWhenMoved
+  cmp [isMouseOn],1
+  jne MouseContinue
+
+  ;wait a while till turning off mouse
+  mov cx, 6
+	mov dx, 1A80h
+	mov al, 0
+	mov ah, 86h
+	int 15h
+
+  call hideMouse
+  mov [isMouseOn], 0
+  jmp MouseContinue
+
+ShowMouseWhenMoved:
+  call showMouse
 	mov [MouseX], cx
 	mov [MouseY], dx
+  mov [isMouseOn], 1
 
+MouseContinue:
   ;check if mouse is on quit button
 	push QUIT_LEFT_COL_GAME
 	push QUIT_RIGHT_COL_GAME
@@ -103,17 +135,7 @@ continue:
 	 cmp al, 'a'
 	 je West
 
-
 	 jne MainLoop
-
-   ;mov [ExitToMenu], 1
-	 ;push	ds
-	 ;mov	ax,251Ch
-	 ;mov	dx,[timerOfs]
-	 ;mov	ds,[timerSeg]
-	 ;int	21h
-	 ;pop	ds
-
 North:
 
 ;proc color pacman in black
@@ -242,6 +264,7 @@ WaitForData:
 
   cmp [Bool], 1
   jne WaitForData
+
 
 @@ExitProc:
   mov [play],0
@@ -1720,10 +1743,10 @@ PROC	PrintSecondsElapse
     call printAxDec
     inc [cs:counter]
 		jmp @@20
+
 @@TimeoutEnd:
 	mov [TimeIsUp], 1
   ;TODO: display Time is over
-	jmp EXIT
 
 @@20:
 	cli

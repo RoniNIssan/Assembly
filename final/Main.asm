@@ -43,9 +43,9 @@ Main:
 EXIT:
 
 ;for future development of timer exit
-;call EndTimer
+call EndTimer
 ;call Delay
-;jmp Main
+jmp Main
 EXIT_END:
 
   call finishGraphicMode
