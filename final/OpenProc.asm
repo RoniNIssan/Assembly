@@ -1,8 +1,5 @@
 ;=============================================
 ;Open screen graphics
-;--------------------------------------------
-;Output:
-;via global bool varibles about turned buttons
 ;=============================================
 proc OpenScreen
 
@@ -23,6 +20,8 @@ mov [MouseX], cx
 mov [MouseY], dx
 
 ;check if quit button available
+push [MouseX]
+push [MouseY]
 push QUIT_LEFT_COL_OPEN
 push QUIT_RIGHT_COL_OPEN
 push QUIT_TOP_ROW_OPEN
@@ -37,6 +36,8 @@ je ExitShourtcut
 
 PlayBanner:
 ;check if play button available
+push [MouseX]
+push [MouseY]
 push PLAY_LEFT_COL
 push PLAY_RIGHT_COL
 push PLAY_TOP_ROW
@@ -67,7 +68,8 @@ jmp @@ExitProc
 
 
 LeaderBoardBanner:
-
+push [MouseX]
+push [MouseY]
 push LB_LEFT_COL
 push LB_RIGHT_COL
 push LB_TOP_ROW
@@ -104,7 +106,8 @@ call ShowMouse
 jmp CheckStatusShourtcut
 
 GameInstructionsBanner:
-
+push [MouseX]
+push [MouseY]
 push INST_LEFT_COL
 push INST_RIGHT_COL
 push INST_TOP_ROW
@@ -183,6 +186,8 @@ InstructionsLoop:
  mov [MouseX], cx
  mov [MouseY], dx
 
+ push [MouseX]
+ push [MouseY]
  push QUIT_LEFT_COL_OPEN
  push QUIT_RIGHT_COL_OPEN
  push QUIT_TOP_ROW_OPEN
@@ -194,7 +199,8 @@ InstructionsLoop:
  je @@ExitShourtcut
 
 NextPage:
-
+ push [MouseX]
+ push [MouseY]
  push ARROW_FORWARD_LEFT_COL
  push ARROW_FORWARD_RIGHT_COL
  push ARROW_FORWARD_TOP_ROW
@@ -213,6 +219,8 @@ NextPage:
  jmp @@ExitProc
 
 BackPage:
+ push [MouseX]
+ push [MouseY]
  push ARROW_BACKWARD_LEFT_COL
  push ARROW_BACKWARD_RIGHT_COL
  push ARROW_BACKWARD_TOP_ROW
@@ -337,6 +345,7 @@ ret
 endp GetMousePos
 ;=============================================
 ;Open Bmp file
+;Proc fits BMP's with the size of 320*200
 ;--------------------------------------------
 ;Input:
 ;filename offset in dx
@@ -350,7 +359,7 @@ proc ShortBmp
 	call OpenShowBmp
 	ret
 
-	endp ShortBmp
+endp ShortBmp
 
 ;=============================================
 ;Check mouse position on buttons
@@ -370,6 +379,9 @@ proc ShortBmp
 ;=============================================
 
 ;Button values
+;Button values
+currentX equ [bp + 14]
+currentY equ [bp + 12]
 leftCol equ [bp + 10]
 rightCol equ [bp + 8]
 topRow equ [bp + 6]
@@ -384,20 +396,20 @@ proc isInRange
 
  mov [Bool], 0
 
-Rows_Check:
+@@Rows_Check:
 
- ;mouse pos bigger than button edge
- mov ax, [MouseX]
- ;check if mouse is in rows range
+	 ;mouse pos bigger than button edge
+ mov ax, currentX
+ ;check if currentX checked is in given row range
  cmp ax, rightCol
  ja @@ExitProc
  cmp ax, leftCol
  jb @@ExitProc
 
-Col_Check:
+@@Col_Check:
 
- mov ax, [MouseY]
- ;check if mouse is in col range
+ mov ax, currentY
+ ;check if currentY checked is in given col range
  cmp ax, topRow
  jb @@ExitProc
  cmp ax, bottomRow
@@ -405,15 +417,15 @@ Col_Check:
 
  mov [Bool], 1
 
+
 @@ExitProc:
 
  pop ax
  pop bp
 
- ret 8
+ ret 12
 
 endp isInRange
-
 
 ;======================
 ;start screen dispaly
@@ -421,11 +433,7 @@ endp isInRange
 proc StratScreen_OPEN
 
 	 mov dx, offset Filename_StartScreen
-	 mov [BmpLeft],0 ;start point
-	 mov [BmpTop],0
-	 mov [BmpColSize], FILE_COLS
-	 mov [BmpRowSize] ,FILE_ROWS
-	 call OpenShowBmp
+   call ShortBmp
 
 	 ret
 
@@ -451,7 +459,7 @@ proc LbButtonDisplay
 	 mov dx, offset Filename_LbButton
 	 call ShortBmp
 
- ret
+   ret
 
 endp LbButtonDisplay
 

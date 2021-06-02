@@ -3,6 +3,11 @@
 ;===========
 proc EndTimer
 
+mov [cs: inProgress], 0
+mov [cs:difference], 0
+mov [cs:lastTimer], 0
+mov [cs:fixDrift], 0
+mov [cs:counter], 0
 push	ds
 mov	ax,251Ch
 mov	dx,[timerOfs]
@@ -20,7 +25,7 @@ endp EndTimer
 proc Game
 
 call hideMouse
-call StratScreen
+call StratScreen_Game
 mov [pacmanX], START_POS_X
 mov [pacmanY], START_POS_Y
 mov [pacmanCurrentDirection], DEFAULT_DIRECTION
@@ -81,6 +86,8 @@ ShowMouseWhenMoved:
 
 MouseContinue:
   ;check if mouse is on quit button
+  push [MouseX]
+  push [MouseY]
 	push QUIT_LEFT_COL_GAME
 	push QUIT_RIGHT_COL_GAME
 	push QUIT_TOP_ROW_GAME
@@ -256,6 +263,8 @@ WaitForData:
   mov [MouseX], cx
   mov [MouseY], dx
 
+  push [MouseX]
+  push [MouseY]
   push QUIT_LEFT_COL_OPEN
   push QUIT_RIGHT_COL_OPEN
   push QUIT_TOP_ROW_OPEN
@@ -275,12 +284,12 @@ endp Game
 
 
 
+; ◄■■► Enter: X,Y of the starting point of the frame & frame size ◄■■►
+; ◄■■► Description: Convertes user drawing to an array of pixels  ◄■■►
 currentX equ [word bp + 4] ;left col
 currentY equ [word bp + 6] ;top row
 rightCol equ [word bp - 2]
 bottomRow equ [word bp - 4]
-; ◄■■► Enter: X,Y of the starting point of the frame & frame size ◄■■►
-; ◄■■► Description: Convertes user drawing to an array of pixels  ◄■■►
 
 proc PictureToPixels
 
@@ -330,13 +339,13 @@ innerLoop:
 
 writeYellow:
     ;find if current check refers to pacman -if so skip
-    push bottomRow
-    push topRow
+    push [MouseX]
+    push [MouseY]
+    push currentX
     push rightCol
-    push leftCol
-    push [startY]
-    push [startX]
-    call isInRange_Maze
+    push currentY
+    push bottomRow
+    call isInRange
 
     cmp [Bool], 1
     je SkipPacman
@@ -368,81 +377,16 @@ done:
     add sp, 4
     ret 4
 endp PictureToPixels
-
-;=============================================
-;Check mouse position on buttons
-;--------------------------------------------
-;Input:
-;1- Value to check X (loop check)
-;2-  Value to check X (loop check)
-;Stack inputs:
-;left column, right column
-;top row, bottom row
-;--------------------------------------------
-;Registers:
-; ax, bp
-;--------------------------------------------
-;Output:
-;varible Bool 1 true/ 0 false
-;=============================================
-
-;Button values
-currentX equ [bp + 14]
-currentY equ [bp + 12]
-leftCol equ [bp + 10]
-rightCol equ [bp + 8]
-topRow equ [bp + 6]
-bottomRow equ [bp + 4]
-
-proc isInRange_Maze
-
- push bp
- mov bp, sp
-
- push ax
-
- mov [Bool], 0
-
-@@Rows_Check:
-
-	 ;mouse pos bigger than button edge
- mov ax, currentX
- ;check if currentX checked is in given row range
- cmp ax, rightCol
- ja @@ExitProc
- cmp ax, leftCol
- jb @@ExitProc
-
-@@Col_Check:
-
- mov ax, currentY
- ;check if currentY checked is in given col range
- cmp ax, topRow
- jb @@ExitProc
- cmp ax, bottomRow
- ja @@ExitProc
-
- mov [Bool], 1
-
-
-@@ExitProc:
-
- pop ax
- pop bp
-
- ret 12
-
-endp isInRange_Maze
 ;======================
 ;start screen dispaly
 ;=====================
-proc StratScreen
+proc StratScreen_Game
 
 	 mov dx, offset Filename_Maze
    call ShortBmp
 	 ret
 
-endp StratScreen
+endp StratScreen_Game
 
 ;======================
 ;win screen dispaly
