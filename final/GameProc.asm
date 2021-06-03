@@ -6,8 +6,9 @@ proc EndTimer
 mov [cs: inProgress], 0
 mov [cs:difference], 0
 mov [cs:lastTimer], 0
-mov [cs:fixDrift], 0
+mov [cs:fixDrift], 5
 mov [cs:counter], 0
+mov [cs:isTimeUp], 0
 push	ds
 mov	ax,251Ch
 mov	dx,[timerOfs]
@@ -50,8 +51,8 @@ mov [pacmanCurrentDirection], DEFAULT_DIRECTION
 
 MainLoop:
 
-  ;cmp [TimeIsUp], 1
-  ;je @@GameOver
+  cmp [cs:isTimeUp], 1
+  je @@GameOver
 
 	call ScoreDisplay
 
@@ -107,9 +108,9 @@ continue:
 
 	push [pacmanY]
 	push [pacmanX]
-	call PictureToPixels
-	cmp [isScoreExits],1
-	jne @@GameOver
+	call CheckFinish
+	cmp [isScoreExits],0
+	je @@Win
   ;if maze is empty from dots -> display game over
 
   ;check if keyboard key available
@@ -247,33 +248,25 @@ West:
  call PacmanFigureDisplay
 
  jmp MainLoop
+
 ;If game over [by empty maez or timer]
 @@GameOver:
+  call Delay
   call hideMouse
   call EndTimer
 	call GameOverDisplay
   call ShowMouse
+  call Delay
+  jmp @@ExitProc
 
-WaitForData:
-  call GetMousePos
-  cmp bx, 1
-  jne WaitForData
-
-  shr cx, 1
-  mov [MouseX], cx
-  mov [MouseY], dx
-
-  push [MouseX]
-  push [MouseY]
-  push QUIT_LEFT_COL_OPEN
-  push QUIT_RIGHT_COL_OPEN
-  push QUIT_TOP_ROW_OPEN
-  push QUIT_BOTTOM_ROW_OPEN
-  call isInRange
-
-  cmp [Bool], 1
-  jne WaitForData
-
+@@Win:
+  call EndTimer
+  call Delay
+  call hideMouse
+	call WinDisplay
+  call ShowMouse
+  call Delay
+  jmp @@ExitProc
 
 @@ExitProc:
   mov [play],0
@@ -282,101 +275,85 @@ WaitForData:
 
 endp Game
 
-
-
-; ◄■■► Enter: X,Y of the starting point of the frame & frame size ◄■■►
-; ◄■■► Description: Convertes user drawing to an array of pixels  ◄■■►
-currentX equ [word bp + 4] ;left col
-currentY equ [word bp + 6] ;top row
+curX equ [word bp + 4] ;left col
+curY equ [word bp + 6] ;top row
 rightCol equ [word bp - 2]
 bottomRow equ [word bp - 4]
 
-proc PictureToPixels
+proc CheckFinish
 
-    push bp
-    mov bp, sp
-    sub sp, 4
+  push bp
+  mov bp, sp
+  sub sp, 4
 
-    ;initilizing boundarys
-    mov [startX], MAZE_LEFT_EDGE_X
-    mov [startY], 0
-    mov [isScoreExits], 0
+  mov [isScoreExits],0 ;varible present wether score left
 
-    ;pacman edges values:
-    mov ax, currentX
-    mov rightCol, FILE_COLS_PACMAN
-    add rightCol, ax
+;pacman edges values:
+mov ax, curX
+mov rightCol, FILE_COLS_PACMAN
+add rightCol, ax
 
-    mov ax, currentY
-    mov bottomRow, FILE_ROWS_PACMAN
-    add bottomRow, ax
+mov ax, curY
+mov bottomRow, FILE_ROWS_PACMAN
+add bottomRow, ax
 
-    ; ◄■■ Setting params
-    mov si, 0 ;int i  = 0
-    mov ax, [startX]
-    mov [defaultX], ax
+mov di, MAZE_RIGHT_EDGE_X - MAZE_LEFT_EDGE_X ;pixels needed check
+mov si, 200 ;rows
+mov dx, 0 ;start Y
 
-outerLoop:
-    ;check if cols reached end
-    cmp si, MAZE_RIGHT_EDGE_X
-    je done
-    mov bx, 0 ;int j = 0
-    mov ax, [defaultX]
-    mov [startX], ax
 
-innerLoop:
-    ; ◄■■ Get pixel color of X&Y
-    mov ah,0Dh
-    mov cx, [startX]
-    mov dx, [startY]
-    int 10H ; AL = COLOR
+Rows:
+  mov cx, MAZE_LEFT_EDGE_X ;was 8 start X
+	mov di, MAZE_RIGHT_BOUNDARY_X ;was 168
+Cols:
+	; ◄■■ Get pixel color of X&Y
+	mov ah,0Dh
+	int 10H ; AL = COLOR
+	cmp al, YELLOW_DOTS_COLOR_1
+	je writeYellow
+	cmp al, YELLOW_DOTS_COLOR_2
+	je writeYellow
 
-    cmp al, YELLOW_DOTS_COLOR_1
-    je writeYellow
-    cmp al, YELLOW_DOTS_COLOR_2
-    je writeYellow
-    jmp nextWrite
+cont:
+
+	inc cx
+	dec di
+
+	cmp di, 0
+	jne Cols
+
+	inc dx
+	dec si
+	cmp si, 0
+	jne Rows
+
+	jmp done
 
 writeYellow:
     ;find if current check refers to pacman -if so skip
-    push [MouseX]
-    push [MouseY]
-    push currentX
-    push rightCol
-    push currentY
-    push bottomRow
-    call isInRange
+    cmp cx, curX
+    jb yesYellow
+    cmp cx, rightCol
+    ja yesYellow
+    cmp dx, curY
+    jb yesYellow
+    cmp dx, bottomRow
+    ja yesYellow
 
-    cmp [Bool], 1
-    je SkipPacman
+SkipPacman:
+		jmp cont
+
+yesYellow:
     mov [isScoreExits], 1
     jmp done
 
-SkipPacman:
-
-    add [startX], FILE_COLS
-
-nextWrite:
-
-    inc di
-    inc bx
-    inc [startX]
-
-    cmp bx, 200
-    je innerLoopDone
-    jmp innerLoop
-
-innerLoopDone:
-    inc [startY]
-    inc si
-    jmp outerLoop
-
 done:
 
-    pop bp
     add sp, 4
+    pop bp
     ret 4
-endp PictureToPixels
+endp CheckFinish
+
 ;======================
 ;start screen dispaly
 ;=====================
@@ -389,15 +366,26 @@ proc StratScreen_Game
 endp StratScreen_Game
 
 ;======================
-;win screen dispaly
+;game screen dispaly
 ;=====================
 proc GameOverDisplay
 
-	 mov dx, offset Filename_Game_Win
+	 mov dx, offset Filename_Lose_Dis
    call ShortBmp
 	 ret
 
 endp GameOverDisplay
+
+;======================
+;win screen dispaly
+;=====================
+proc WinDisplay
+
+	 mov dx, offset Filename_Win_Screen
+   call ShortBmp
+	 ret
+
+endp WinDisplay
 ;======================
 ;Timer initalizing
 ;=====================
@@ -1643,6 +1631,7 @@ difference	dw	0
 lastTimer   dw  0
 fixDrift    db  5
 counter     dw  0
+isTimeUp    db  0
 
 PROC	PrintSecondsElapse
 	cmp	[byte cs:inProgress],0
@@ -1689,7 +1678,7 @@ PROC	PrintSecondsElapse
 		jmp @@20
 
 @@TimeoutEnd:
-	mov [TimeIsUp], 1
+	mov [cs:isTimeUp], 1
   ;TODO: display Time is over
 
 @@20:

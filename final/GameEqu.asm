@@ -4,7 +4,7 @@ FILENAME_PACMAN_SOUTH equ 'PS.bmp'
 FILENAME_PACMAN_EAST equ 'PE.bmp'
 FILENAME_PACMAN_WEST equ 'PW.bmp'
 FILENAME_WIN equ 'win.bmp'
-FILENAME_LOOSE equ 'loose.bmp'
+FILENAME_LOSE equ 'Lose.bmp'
 
 ;Paman
 START_POS_X = 86
@@ -43,6 +43,8 @@ PACMAN_MIDDLE_Y_PIXLE_WEST = (FILE_ROWS_PACMAN - 1) / 2 + 1
 ;Needed when turn:
 DISTANCE_FROM_BOUNDARY_X = 2; when moving on Y - distanc1e between pacman and boundary
 DISTANCE_FROM_BOUNDARY_Y = 2; when moving on X - distance between  pacman and boundary
+
+
 MAZE_RIGHT_EDGE_X = 172
 MAZE_LEFT_EDGE_X = 8
 
@@ -54,7 +56,7 @@ LowTimer	EQU	006Ch
 PIC8259		EQU	0020h
 EOI		    EQU	0020h
 
-TIMEOUT = 80
+TIMEOUT = 90
 TIME_ROW = 46
 TIME_COL = 20
 
