@@ -27,26 +27,21 @@ Start:
 Main:
  call OpenScreen ;open screen display
  cmp [Play], 1 ;check- exit by Play button?
- jne EXIT_END
+ jne EXIT
 
- mov	es,ax
- mov	[word cs:difference],ticks
+; mov	es,ax
+ ;mov	[word cs:difference],ticks
 
+ ;call Delay
+ ;call Delay
+ ;call Delay
  call Game ;game play display
  call hideMouse
- call GameOverDisplay
  call Delay
  call Delay
- call ShowMouse
  jmp Main
 
 EXIT:
-
-;for future development of timer exit
-call EndTimer
-;call Delay
-jmp Main
-EXIT_END:
 
   call finishGraphicMode
   mov ax, 4C00h ; returns control to dos

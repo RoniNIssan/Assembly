@@ -5,6 +5,7 @@
 	Filename_PacmanWest db FILENAME_PACMAN_WEST, 0
 	Filename_Lose_Dis db FILENAME_LOSE, 0
 	Filename_Win_Screen db FILENAME_WIN, 0
+	Filename_GameOver_Dis db FILENAME_GAMEOVER, 0
 	ScrLine db FILE_COLS_MAZE dup (0)  ; One Color line read buffer
 
 	FileHandle	dw ?

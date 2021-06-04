@@ -25,12 +25,13 @@ endp EndTimer
 ;===========
 proc Game
 
+;call Delay
+;call Delay
+;call Delay
+call Delay
 call hideMouse
+call restoreGameDis
 call StratScreen_Game
-mov [pacmanX], START_POS_X
-mov [pacmanY], START_POS_Y
-mov [pacmanCurrentDirection], DEFAULT_DIRECTION
-
  mov ax,0h  ;initilaizing mouse
  int 33h
 
@@ -42,7 +43,7 @@ mov [pacmanCurrentDirection], DEFAULT_DIRECTION
  ;call ShowMouse
  call Timer
 
-;Show pacman figure according tp direction and current Position
+;Show pacman figure according tp direction and Ticurrent Position
  push [pacmanCurrentDirection]
  push [pacmanX]
  push [pacmanY]
@@ -52,7 +53,7 @@ mov [pacmanCurrentDirection], DEFAULT_DIRECTION
 MainLoop:
 
   cmp [cs:isTimeUp], 1
-  je @@GameOver
+  je @@TimesUp
 
 	call ScoreDisplay
 
@@ -69,12 +70,7 @@ MainLoop:
   jne MouseContinue
 
   ;wait a while till turning off mouse
-  mov cx, 6
-	mov dx, 1A80h
-	mov al, 0
-	mov ah, 86h
-	int 15h
-
+  call Delay
   call hideMouse
   mov [isMouseOn], 0
   jmp MouseContinue
@@ -99,10 +95,7 @@ MouseContinue:
 
 	cmp bx, 1 ;if mouse was pressed
   jne continue
-  mov [ExitToMenu], 1 ;bool varible which explains why proc ended
-  jmp @@ExitProc
-
-  jmp MainLoop
+  jmp @@Gameover
 
 continue:
 
@@ -250,11 +243,14 @@ West:
  jmp MainLoop
 
 ;If game over [by empty maez or timer]
-@@GameOver:
+@@TimesUp:
+  call Delay
+  call Delay
+  call Delay
   call Delay
   call hideMouse
   call EndTimer
-	call GameOverDisplay
+	call TimesUpDisplay
   call ShowMouse
   call Delay
   jmp @@ExitProc
@@ -262,13 +258,26 @@ West:
 @@Win:
   call EndTimer
   call Delay
+  call Delay
+  call Delay
+  call Delay
   call hideMouse
 	call WinDisplay
   call ShowMouse
   call Delay
   jmp @@ExitProc
 
+@@Gameover:
+  call EndTimer
+  call Delay
+  call hideMouse
+	call GameoverDisplay
+  call ShowMouse
+  call Delay
+  ;jmp @@ExitProc
+
 @@ExitProc:
+
   mov [play],0
   call EndTimer
 	ret
@@ -368,14 +377,23 @@ endp StratScreen_Game
 ;======================
 ;game screen dispaly
 ;=====================
-proc GameOverDisplay
+proc TimesUpDisplay
 
 	 mov dx, offset Filename_Lose_Dis
    call ShortBmp
 	 ret
 
-endp GameOverDisplay
+endp TimesUpDisplay
+;======================
+;game screen dispaly
+;=====================
+proc GameoverDisplay
 
+	 mov dx, offset Filename_GameOver_Dis
+   call ShortBmp
+	 ret
+
+endp GameoverDisplay
 ;======================
 ;win screen dispaly
 ;=====================
@@ -387,9 +405,29 @@ proc WinDisplay
 
 endp WinDisplay
 ;======================
+;win screen dispaly
+;=====================
+proc restoreGameDis
+  mov [pacmanX], START_POS_X
+  mov [pacmanY], START_POS_Y
+  mov [pacmanCurrentDirection], DEFAULT_DIRECTION
+  mov [score], 0
+
+  ;clear keyboard buffer
+  mov ah,0ch
+  mov al,0
+  int 21h
+
+  ret
+endp restoreGameDis
+
+;======================
 ;Timer initalizing
 ;=====================
 proc Timer
+	 mov	ax,@data
+   mov	es,ax
+   mov	[word cs:difference],ticks
 
 	 ; save the current interrupt verctor.
 	 ; the timer interrupt number is 1C
