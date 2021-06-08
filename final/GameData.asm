@@ -30,7 +30,6 @@
 	pacmanCurrentDirection dw DEFAULT_DIRECTION
 
 	;Boolean
-	;TimeIsUp db 0
 	isScoreExits db 0
 	;Timer
 	exitCode1	db	0
@@ -39,7 +38,6 @@
 
 	;Score
 	score dw 0
-	countYellow dw 0
 
 	pacmanBlank db	0,0,0,0,0,0,0
 							db	0,0,0,0,0,0,0

@@ -24,17 +24,15 @@ Start:
 
  call stratGraphicMode
 
+ mov ax,0h ;initilaize mouse
+ int 33h
+ 
 Main:
+
  call OpenScreen ;open screen display
  cmp [Play], 1 ;check- exit by Play button?
  jne EXIT
 
-; mov	es,ax
- ;mov	[word cs:difference],ticks
-
- ;call Delay
- ;call Delay
- ;call Delay
  call Game ;game play display
  call hideMouse
  call Delay

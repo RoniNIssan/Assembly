@@ -7,10 +7,14 @@ FILENAME_WIN equ 'win.bmp'
 FILENAME_LOSE equ 'Lose.bmp'
 FILENAME_GAMEOVER equ 'GameOver.bmp'
 
-;Paman
+;Pacman maze
 START_POS_X = 86
 START_POS_Y = 146
-DEFAULT_DIRECTION = 'W'
+DEFAULT_DIRECTION = 'A'
+
+;Pacman figure
+FILE_ROWS_PACMAN = 9
+FILE_COLS_PACMAN = 9
 
 ;Maze
 FILE_ROWS_MAZE = 200
@@ -21,33 +25,24 @@ BLUE_BOUNDARY_COLOR = 0FCh
 YELLOW_DOTS_COLOR_1 = 07Fh
 YELLOW_DOTS_COLOR_2 = 0FBh
 
-;Pacman figure
-FILE_ROWS_PACMAN = 9
-FILE_COLS_PACMAN = 9
-
 ;Quit Banner values
 QUIT_RIGHT_COL_GAME = 313
 QUIT_LEFT_COL_GAME = 289
 QUIT_TOP_ROW_GAME = 9
 QUIT_BOTTOM_ROW_GAME = 33
 
-;Pacman values
+;Maze values
 MAZE_RIGHT_BOUNDARY_X = 167
 MAZE_LEFT_BOUNDARY_X = 13
+MAZE_RIGHT_EDGE_X = 172
+MAZE_LEFT_EDGE_X = 8
 
 NEXT_POS_ADDED_PIXELS_Y = 7
 NEXT_POS_ADDED_PIXELS_X = 7
 
-PACMAN_MIDDLE_X_PIXLE = (FILE_COLS_PACMAN - 1) / 2 + 1
-PACMAN_MIDDLE_Y_PIXLE_WEST = (FILE_ROWS_PACMAN - 1) / 2 + 1
-
 ;Needed when turn:
 DISTANCE_FROM_BOUNDARY_X = 2; when moving on Y - distanc1e between pacman and boundary
 DISTANCE_FROM_BOUNDARY_Y = 2; when moving on X - distance between  pacman and boundary
-
-
-MAZE_RIGHT_EDGE_X = 172
-MAZE_LEFT_EDGE_X = 8
 
 
 ;----- Equates Timeer
@@ -57,12 +52,14 @@ LowTimer	EQU	006Ch
 PIC8259		EQU	0020h
 EOI		    EQU	0020h
 
-TIMEOUT = 10
+TIMEOUT = 90
+;cursor pos
 TIME_ROW = 46
 TIME_COL = 20
 
 
 ;Score
+SCORE_ADDED_POINTS = 10
+;cursor pos
 SCORE_ROW = 36
 SCORE_COL = 20
-SCORE_ADDED_POINTS = 10

@@ -1,61 +1,38 @@
 ;============
-;	End Timer
-;===========
-proc EndTimer
-
-mov [cs: inProgress], 0
-mov [cs:difference], 0
-mov [cs:lastTimer], 0
-mov [cs:fixDrift], 5
-mov [cs:counter], 0
-mov [cs:isTimeUp], 0
-push	ds
-mov	ax,251Ch
-mov	dx,[timerOfs]
-mov	ds,[timerSeg]
-int	21h
-pop	ds
-
-ret
-
-endp EndTimer
-
-;============
 ;	game
 ;===========
 proc Game
 
-;call Delay
-;call Delay
-;call Delay
-call Delay
-call hideMouse
-call restoreGameDis
-call StratScreen_Game
- mov ax,0h  ;initilaizing mouse
- int 33h
+  call Delay
+  call hideMouse
+  call restoreGameDis
+  call StratScreen_Game
+  call Timer
+  ;Show pacman figure according tp direction and Ticurrent Position
+  push [pacmanCurrentDirection]
+  push [pacmanX]
+  push [pacmanY]
+  call PacmanFigureDisplay
 
+ call showMouse
+ cmp [isMouseOn],1
+
+;update mouse start positiob
  call GetMousePos
  shr cx, 1
  mov [MouseX], cx
  mov [MouseY], dx
 
- ;call ShowMouse
- call Timer
-
-;Show pacman figure according tp direction and Ticurrent Position
- push [pacmanCurrentDirection]
- push [pacmanX]
- push [pacmanY]
- call PacmanFigureDisplay
-
 
 MainLoop:
 
+  call ScoreDisplay ;present score on screen
+
+  ;time exit check
+  ;if time is up -> exit
   cmp [cs:isTimeUp], 1
   je @@TimesUp
 
-	call ScoreDisplay
 
   ;Absorb mouse position
   call GetMousePos
@@ -76,6 +53,7 @@ MainLoop:
   jmp MouseContinue
 
 ShowMouseWhenMoved:
+  ;if mouse posiition had changed., present it
   call showMouse
 	mov [MouseX], cx
 	mov [MouseY], dx
@@ -99,20 +77,19 @@ MouseContinue:
 
 continue:
 
+  ;if maze is empty from dots -> display game over
 	push [pacmanY]
 	push [pacmanX]
 	call CheckFinish
 	cmp [isScoreExits],0
 	je @@Win
-  ;if maze is empty from dots -> display game over
 
   ;check if keyboard key available
  	 mov ah, 1
  	 int 16h
-
 	 jz MainLoop ;not available -> check mouse new pos
 
-   ;get key value
+   ;get key value present new direction
 	 mov ah, 0
 	 int 16h
 
@@ -155,8 +132,9 @@ North:
  push [pacmanY]
  push [pacmanX]
  call FindNextAddedY_North
- pop [pacmanY]
+ pop [pacmanY] ;new value tranformed into varible
 
+;display figure in next position
  push [pacmanCurrentDirection]
  push [pacmanX]
  push [pacmanY]
@@ -182,9 +160,9 @@ South:
  push [pacmanY]
  push [pacmanX]
  call FindNextAddedY_South
+ pop [pacmanY] ;next value tranformed into varible
 
- pop [pacmanY]
-
+;present figure in new position
  push [pacmanCurrentDirection]
  push [pacmanX]
  push [pacmanY]
@@ -193,23 +171,25 @@ South:
  jmp MainLoop
 
 East:
-
+;proc color pacman in black
  push [pacmanX]
  push [pacmanY]
  call removePacman
 
- mov [pacmanCurrentDirection], 'D'
+ mov [pacmanCurrentDirection], 'D' ;update direction
 
+ ;calculate score according to next eaten spot
  push [pacmanX]
  push [pacmanY]
  call AddScore_East
 
+ ;find next pos
  push [pacmanX]
  push [pacmanY]
  call FindNextAddedX_East
+ pop [pacmanX] ;next value tranformed into vvatible
 
- pop [pacmanX]
-
+;present figure in new position
  push [pacmanCurrentDirection]
  push [pacmanX]
  push [pacmanY]
@@ -219,22 +199,25 @@ East:
 
 West:
 
+;proc color pacman in black
  push [pacmanX]
  push [pacmanY]
  call removePacman
 
- mov [pacmanCurrentDirection], 'A'
+ mov [pacmanCurrentDirection], 'A' ;update direction
 
+ ;calculate score according to next eaten spot
  push [pacmanX]
  push [pacmanY]
  call AddScore_West
 
+ ;find next pos
  push [pacmanX]
  push [pacmanY]
  call FindNextAddedX_West
+ pop [pacmanX] ;next value tranformed into varible
 
- pop [pacmanX]
-
+;display figure in new position
  push [pacmanCurrentDirection]
  push [pacmanX]
  push [pacmanY]
@@ -242,7 +225,7 @@ West:
 
  jmp MainLoop
 
-;If game over [by empty maez or timer]
+;if time is up- present screen and exit
 @@TimesUp:
   call Delay
   call Delay
@@ -255,6 +238,7 @@ West:
   call Delay
   jmp @@ExitProc
 
+;if win- present screen and exit
 @@Win:
   call EndTimer
   call Delay
@@ -267,6 +251,7 @@ West:
   call Delay
   jmp @@ExitProc
 
+;if exit button pressed- present screen and exit
 @@Gameover:
   call EndTimer
   call Delay
@@ -277,13 +262,26 @@ West:
   ;jmp @@ExitProc
 
 @@ExitProc:
-
-  mov [play],0
+  call showMouse
+  mov [play],0 ;update -> no longer in game
   call EndTimer
 	ret
 
 endp Game
-
+;=============================================
+;Check if win or loose
+;--------------------------------------------
+;Input:
+;1- Pacman's current X
+;2- Pacman's current Y
+;Stack inputs:
+;--------------------------------------------
+;Registers:
+; ax, bx, cx, dx, si, di, bp
+;--------------------------------------------
+;Output:
+;varible isScoreExits 1 true [loose]/ 0 false
+;=============================================
 curX equ [word bp + 4] ;left col
 curY equ [word bp + 6] ;top row
 rightCol equ [word bp - 2]
@@ -306,14 +304,14 @@ mov ax, curY
 mov bottomRow, FILE_ROWS_PACMAN
 add bottomRow, ax
 
-mov di, MAZE_RIGHT_EDGE_X - MAZE_LEFT_EDGE_X ;pixels needed check
-mov si, 200 ;rows
-mov dx, 0 ;start Y
+mov di, MAZE_RIGHT_EDGE_X - MAZE_LEFT_EDGE_X ;cols counter
+mov si, 200 ;max Y value
+mov dx, 0 ;min Y value
 
 
 Rows:
-  mov cx, MAZE_LEFT_EDGE_X ;was 8 start X
-	mov di, MAZE_RIGHT_BOUNDARY_X ;was 168
+  mov cx, MAZE_LEFT_EDGE_X ;min X value
+	mov di, MAZE_RIGHT_BOUNDARY_X ;max X value
 Cols:
 	; ◄■■ Get pixel color of X&Y
 	mov ah,0Dh
@@ -325,21 +323,22 @@ Cols:
 
 cont:
 
-	inc cx
-	dec di
+	inc cx ;x pointer
+	dec di ;loop counter
 
-	cmp di, 0
+	cmp di, 0;cols check finished
 	jne Cols
 
-	inc dx
-	dec si
-	cmp si, 0
+	inc dx ;increase y counter
+	dec si ;decrese row loop counter
+	cmp si, 0; row check finished
 	jne Rows
 
 	jmp done
 
 writeYellow:
     ;find if current check refers to pacman -if so skip
+    ;is the yellow in pacman's range
     cmp cx, curX
     jb yesYellow
     cmp cx, rightCol
@@ -353,7 +352,7 @@ SkipPacman:
 		jmp cont
 
 yesYellow:
-    mov [isScoreExits], 1
+    mov [isScoreExits], 1 ;score appears in maze- no win
     jmp done
 
 done:
@@ -375,7 +374,7 @@ proc StratScreen_Game
 endp StratScreen_Game
 
 ;======================
-;game screen dispaly
+;time's up screen dispaly
 ;=====================
 proc TimesUpDisplay
 
@@ -385,7 +384,7 @@ proc TimesUpDisplay
 
 endp TimesUpDisplay
 ;======================
-;game screen dispaly
+;game over screen dispaly
 ;=====================
 proc GameoverDisplay
 
@@ -404,14 +403,16 @@ proc WinDisplay
 	 ret
 
 endp WinDisplay
-;======================
-;win screen dispaly
-;=====================
+;============================================
+;restore pacman values before restarting game
+;============================================
 proc restoreGameDis
+
   mov [pacmanX], START_POS_X
   mov [pacmanY], START_POS_Y
   mov [pacmanCurrentDirection], DEFAULT_DIRECTION
   mov [score], 0
+  mov [isMouseOn], 1
 
   ;clear keyboard buffer
   mov ah,0ch
@@ -449,13 +450,36 @@ proc Timer
 	 ret
 
 endp Timer
+;============
+;	End Timer
+;===========
+proc EndTimer
 
+;restore time values
+mov [cs: inProgress], 0
+mov [cs:difference], 0
+mov [cs:lastTimer], 0
+mov [cs:fixDrift], 5
+mov [cs:counter], 0
+mov [cs:isTimeUp], 0
+
+;restore interrupt
+push	ds
+mov	ax,251Ch
+mov	dx,[timerOfs]
+mov	ds,[timerSeg]
+int	21h
+pop	ds
+
+ret
+
+endp EndTimer
 ;======================
 ;Score Display
 ;=====================
 proc ScoreDisplay
 
-	 push SCORE_ROW
+	 push SCORE_ROW ;cursor position
 	 push SCORE_COL
 	 mov ax, [score]
 	 call printAxDec
@@ -570,6 +594,7 @@ add nextX, DISTANCE_FROM_BOUNDARY_X
 
 @@ExitProc:
 
+;save nextX in top Stack cell
 mov cx, nextX
 mov currentX, cx
 
@@ -700,8 +725,9 @@ sub nextX, DISTANCE_FROM_BOUNDARY_X
 	mov nextX, MAZE_LEFT_EDGE_X + FILE_COLS_PACMAN
 
 @@ExitProc:
-
+;restore normalized value
 sub nextX, FILE_COLS_PACMAN
+;save nextX in top Stack cell
 mov cx, nextX
 mov currentX, cx
 
@@ -822,6 +848,7 @@ pop cx
 @@ExitProc:
   ;restore not normalized pacman values
 	sub nextY, FILE_COLS_PACMAN
+  ;save next Y value in top stack cell
 	mov dx, nextY
 	mov currentY, dx
 
@@ -934,15 +961,16 @@ proc FindNextAddedY_North
 
 	mov dx, nextY
 	mov currentY, dx
+  ;save next Y value in top stack cell
 
-add sp, 4
+  add sp, 4
 
-pop cx
-pop dx
-pop ax
-pop bp
+  pop cx
+  pop dx
+  pop ax
+  pop bp
 
-ret 2
+  ret 2
 
 endp FindNextAddedY_North
 
@@ -1054,78 +1082,78 @@ normalizedX equ [word bp - 12]
 
 proc AddScore_East
 
-push bp
-mov bp, sp
+  push bp
+  mov bp, sp
 
-push ax
-push dx
-push cx
+  push ax
+  push dx
+  push cx
 
-sub sp, 6
+  sub sp, 6
 
-;Containing next defualt value
-;CurrentX is top left pacman point -> dosen't present the east muserments properly
-mov ax, currentX
-mov normalizedX, ax
-add normalizedX, FILE_COLS_PACMAN
+  ;Containing next defualt value
+  ;CurrentX is top left pacman point -> dosen't present the east muserments properly
+  mov ax, currentX
+  mov normalizedX, ax
+  add normalizedX, FILE_COLS_PACMAN
 
-push currentX
-push currentY
-call FindNextAddedX_East
-pop nextX
-add nextX, FILE_COLS_PACMAN
+  push currentX
+  push currentY
+  call FindNextAddedX_East
+  pop nextX
+  add nextX, FILE_COLS_PACMAN
 
-mov cx, normalizedX
-mov saveX, cx
+  mov cx, normalizedX
+  mov saveX, cx
 
-@@FindNextDot:
+  @@FindNextDot:
 
-mov dx, currentY
-mov cx, FILE_COLS_PACMAN ;check of front col
+  mov dx, currentY
+  mov cx, FILE_COLS_PACMAN ;check of front col
 
-@@CheckByYs:
-push cx ;save counter value
+  @@CheckByYs:
+  push cx ;save counter value
 
-;dx value is initilaized before inner loop
-mov cx, saveX
-mov ah,0Dh
-int 10h ;absorb color
-;each meeting point increases points
-cmp al, YELLOW_DOTS_COLOR_1
-je @@PopStack
-cmp al, YELLOW_DOTS_COLOR_2
-je @@PopStack
+  ;dx value is initilaized before inner loop
+  mov cx, saveX
+  mov ah,0Dh
+  int 10h ;absorb color
+  ;each meeting point increases points
+  cmp al, YELLOW_DOTS_COLOR_1
+  je @@PopStack
+  cmp al, YELLOW_DOTS_COLOR_2
+  je @@PopStack
 
-pop cx
-inc dx ;raise col pointer
+  pop cx
+  inc dx ;raise col pointer
 
-loop @@CheckByYs
+  loop @@CheckByYs
 
-;stop counting if next value smaller than next defualt value
-mov cx, saveX
-cmp cx, nextX
-jae @@ExitProc
+  ;stop counting if next value smaller than next defualt value
+  mov cx, saveX
+  cmp cx, nextX
+  jae @@ExitProc
 
-inc saveX ;increase nextX counter
-jmp @@FindNextDot
+  inc saveX ;increase nextX counter
+  jmp @@FindNextDot
 
-@@PopStack:
-pop cx
+  @@PopStack:
+  pop cx
 
-@@IncScore:
+  @@IncScore:
 
-add [score], SCORE_ADDED_POINTS
+  add [score], SCORE_ADDED_POINTS
 
-@@ExitProc:
+  @@ExitProc:
 
-add sp, 6
+  add sp, 6
 
-pop cx
-pop dx
-pop ax
-pop bp
+  pop cx
+  pop dx
+  pop ax
+  pop bp
 
-ret 4
+  ret 4
 
 endp AddScore_East
 ;=============================================
@@ -1283,7 +1311,7 @@ proc AddScore_North
 	cmp dx, nextY
 	jbe @@ExitProc
 
-	dec dx
+	dec dx ;continue loop
 	jmp @@FindNextDot
 
 @@PopStack:
@@ -1325,13 +1353,13 @@ proc removePacman
 	 push bp
 	 mov bp, sp
 
-	 push cx
- lea cx, [pacmanBlank]
- mov [matrix] , cx
+	 push cx ; save cx
+   lea cx, [pacmanBlank] ;save matrix in varible
+   mov [matrix] , cx
 
-	 push dx
- mov dx, FILE_COLS_PACMAN
- mov cx, FILE_ROWS_PACMAN
+	 push dx; save dx
+   mov dx, FILE_COLS_PACMAN ;define matrix size
+   mov cx, FILE_ROWS_PACMAN
 
 	 push di
 	 push ax
@@ -1342,7 +1370,6 @@ proc removePacman
 	 ;currentY * 320
 	 shl di, 8
 	 shl ax, 6
-
 	 add di, ax
 	 add di, currentX
 
@@ -1801,25 +1828,16 @@ pop_next_from_stack:
      ret 4
 endp printAxDec
 ;================================================
-; in dx how many cols
-; in cx how many rows
-; in matrix - the bytes
-; in di start byte in screen (0 64000 -1)
-;================================================
 ; Description: Put Matrix on Screen
 ; INPUT: DX [COL], CX [ROWS], Matrix offset, DI[Adress]
 ; OUTPUT: Screen
 ; Register Usage: AX, CX, DX, SI
 ;================================================
-
-
 proc putMatrixInScreen
 push es
 push ax
 push si
 
-mov ax, 0A000h
-mov es, ax
 cld
 
 push dx

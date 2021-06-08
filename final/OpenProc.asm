@@ -3,8 +3,6 @@
 ;=============================================
 proc OpenScreen
 
-mov ax,0h ;initilaize mouse
-int 33h
 call Delay
 @@MainLoop:
 call StratScreen_OPEN
@@ -297,7 +295,7 @@ call Delay
 endp GameInstructionsPages
 
 ;================
-; 	Delay Mouse
+; 	Delay - wait 0.2 s
 ;===============
 proc Delay
 
@@ -362,11 +360,11 @@ proc ShortBmp
 endp ShortBmp
 
 ;=============================================
-;Check mouse position on buttons
+;Check given point position on buttons
 ;--------------------------------------------
 ;Input:
-;1- MouseX -> cx (shr cx, 1)
-;2- MouseY -> dx
+;1- Current X [MouseX -> cx (shr cx, 1)]
+;2- Current Y [MouseY -> dx]
 ;Stack inputs:
 ;left column, right column
 ;top row, bottom row
@@ -377,11 +375,10 @@ endp ShortBmp
 ;Output:
 ;varible Bool 1 true/ 0 false
 ;=============================================
-
-;Button values
-;Button values
+;current point checked [mouse values etc]
 currentX equ [bp + 14]
 currentY equ [bp + 12]
+;Button values
 leftCol equ [bp + 10]
 rightCol equ [bp + 8]
 topRow equ [bp + 6]
@@ -398,7 +395,7 @@ proc isInRange
 
 @@Rows_Check:
 
-	 ;mouse pos bigger than button edge
+ ;current pos bigger than button edge
  mov ax, currentX
  ;check if currentX checked is in given row range
  cmp ax, rightCol

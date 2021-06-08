@@ -11,12 +11,11 @@ Filename_FourthInst db FILENAME_INST_4, 0
 ;Mouse Varibles
 MouseX dw ?
 MouseY dw ?
-isMouseOn dw ?
+isMouseOn dw 1
 
 ;Boolean
 Bool db 0
 isButtonOn db 0
-ExitToMenu db 0
 
 ;Buttons on
 play db 0
