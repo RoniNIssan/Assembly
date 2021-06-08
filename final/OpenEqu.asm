@@ -1,5 +1,3 @@
-
-
 FILENAME_SCREEN equ 'Screen.bmp'
 FILENAME_PLAY equ 'Play.bmp'
 FILENAME_LB equ 'lb.bmp'
