@@ -1,14 +1,12 @@
-
-
-FILENAME_SCREEN equ 'Screen.bmp'
-FILENAME_PLAY equ 'Play.bmp'
-FILENAME_LB equ 'lb.bmp'
-FILENAME_INST equ 'Inst.bmp'
-FILENAME_NA equ 'NA.bmp'
-FILENAME_INST_1 equ '1.bmp'
-FILENAME_INST_2 equ '2.bmp'
-FILENAME_INST_3 equ '3.bmp'
-FILENAME_INST_4 equ '4.bmp'
+FILENAME_SCREEN equ 'C:\TASM\Proj\files\Screen.bmp'
+FILENAME_PLAY equ 'C:\TASM\Proj\files\Play.bmp'
+FILENAME_LB equ 'C:\TASM\Proj\files\lb.bmp'
+FILENAME_INST equ 'C:\TASM\Proj\files\Inst.bmp'
+FILENAME_NA equ 'C:\TASM\Proj\files\NA.bmp'
+FILENAME_INST_1 equ 'C:\TASM\Proj\files\1.bmp'
+FILENAME_INST_2 equ 'C:\TASM\Proj\files\2.bmp'
+FILENAME_INST_3 equ 'C:\TASM\Proj\files\3.bmp'
+FILENAME_INST_4 equ 'C:\TASM\Proj\files\4.bmp'
 
 FILE_ROWS = 200
 FILE_COLS = 320

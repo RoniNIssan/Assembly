@@ -5,13 +5,13 @@ STACK 256h
 jumps
 p186
 
-include "OpenEqu.asm"
-include "GameEqu.asm"
+include "C:\TASM\Proj\code\OpenEqu.asm"
+include "C:\TASM\Proj\code\GameEqu.asm"
 
 DATASEG
 
-include "OpenData.asm"
-include "GameData.asm"
+include "C:\TASM\Proj\code\OpenData.asm"
+include "C:\TASM\Proj\code\GameData.asm"
 
 
 CODESEG
@@ -26,7 +26,7 @@ Start:
 
  mov ax,0h ;initilaize mouse
  int 33h
- 
+
 Main:
 
  call OpenScreen ;open screen display
@@ -45,7 +45,7 @@ EXIT:
   mov ax, 4C00h ; returns control to dos
   int 21h
 
-include "OpenProc.asm"
-include "GameProc.asm"
+include "C:\TASM\Proj\code\OpenProc.asm"
+include "C:\TASM\Proj\code\GameProc.asm"
 
 END Start

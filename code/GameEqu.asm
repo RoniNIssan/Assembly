@@ -1,11 +1,11 @@
-FILENAME_GAME_DISPLAY equ 'Game.bmp'
-FILENAME_PACMAN_NORTH equ 'PN.bmp'
-FILENAME_PACMAN_SOUTH equ 'PS.bmp'
-FILENAME_PACMAN_EAST equ 'PE.bmp'
-FILENAME_PACMAN_WEST equ 'PW.bmp'
-FILENAME_WIN equ 'win.bmp'
-FILENAME_LOSE equ 'Lose.bmp'
-FILENAME_GAMEOVER equ 'GameOver.bmp'
+FILENAME_GAME_DISPLAY equ 'C:\TASM\Proj\files\Game.bmp'
+FILENAME_PACMAN_NORTH equ 'C:\TASM\Proj\files\PN.bmp'
+FILENAME_PACMAN_SOUTH equ 'C:\TASM\Proj\files\PS.bmp'
+FILENAME_PACMAN_EAST equ 'C:\TASM\Proj\files\PE.bmp'
+FILENAME_PACMAN_WEST equ 'C:\TASM\Proj\files\PW.bmp'
+FILENAME_WIN equ 'C:\TASM\Proj\files\win.bmp'
+FILENAME_LOSE equ 'C:\TASM\Proj\files\Lose.bmp'
+FILENAME_GAMEOVER equ 'C:\TASM\Proj\files\GameOver.bmp'
 
 ;Pacman maze
 START_POS_X = 86
